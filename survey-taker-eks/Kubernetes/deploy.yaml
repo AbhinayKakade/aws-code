@@ -20,7 +20,7 @@ spec:
         cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
     spec:
       containers:
-        - image: ${SURVEY_TAKER_REPOSITORY}:${TAG}
+        - image: us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/survey-taker:latest
           imagePullPolicy: Always
           name: ${SURVEY_TAKER_APP_NAME}
           ports:
@@ -77,7 +77,7 @@ spec:
         cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
     spec:
       containers:
-        - image: ${SURVEY_TAKER_REPOSITORY}:${TAG}
+        - image: us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/survey-taker:latest
           imagePullPolicy: Always
           name: ${SURVEY_TAKER_SHORTURL_APP_NAME}
           ports:

@@ -26,7 +26,7 @@ spec:
         cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
     spec:
       containers:
-        - image: ${SURVEY_TAKER_REPOSITORY}:${TAG}
+        - image: us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/survey-taker:latest
           imagePullPolicy: Always
           name: ${SURVEY_TAKER_APP_NAME}
           ports:
@@ -134,15 +134,15 @@ spec:
 
 
 # Google Managed SSL Certificate.
----
-apiVersion: networking.gke.io/v1
-kind: ManagedCertificate
-metadata:
-  name: managed-certificate
-  namespace: ${SURVEY_TAKER_NAMESPACE}
-spec:
-  domains:
-    - proapi-gcp.experience.com
+# ---
+# apiVersion: networking.gke.io/v1
+# kind: ManagedCertificate
+# metadata:
+#   name: managed-certificate
+#   namespace: ${SURVEY_TAKER_NAMESPACE}
+# spec:
+#   domains:
+#     - proapi-gcp.experience.com
 
 
 ---
@@ -161,13 +161,14 @@ metadata:
     # alb.ingress.kubernetes.io/wafv2-acl-arn: ${WAF_ARN}
     # alb.ingress.kubernetes.io/ssl-redirect: "443"
     # kubernetes.io/ingress.class: ${ING_CLS_NAME}
-    kubernetes.io/ingress.allow-http: "false"
-    networking.gke.io/managed-certificates: managed-certificate
-    kubernetes.io/ingress.global-static-ip-name: exp-prod-gqlswis
+
+    # kubernetes.io/ingress.allow-http: "false"
+    # networking.gke.io/managed-certificates: managed-certificate
+    # kubernetes.io/ingress.global-static-ip-name: exp-prod-gqlswis
 spec:
   rules:
-    - host: ${SURVEY_TAKER_HOST_NAME}
-      http:
+    # - host: ${SURVEY_TAKER_HOST_NAME}
+    - http:
         paths:
           - path: /
             pathType: Prefix
