@@ -1,0 +1,171 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${CHAT_NAMESPACE}
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ${CHAT_PV}
+spec:
+  capacity:
+    storage: ${CHAT_PV_SIZE}
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: efs-sc
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: ${EFS_ID}:/:${EFS_AP}
+    volumeAttributes:
+      encryptInTransit: "true"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${CHAT_PVC}
+  namespace: ${CHAT_NAMESPACE}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  volumeName: ${CHAT_PV}
+  selector:
+    matchLabels:
+      name: ${CHAT_PV}
+  resources:
+    requests:
+      storage: ${CHAT_PV_SIZE}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${CHAT_NAMESPACE}
+  name: ${CHAT_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${CHAT_APP_NAME}
+      namespace: ${CHAT_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${CHAT_NODE_GROUP}
+  replicas: ${CHAT_MIN_REP}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${CHAT_APP_NAME}
+        namespace: ${CHAT_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${CHAT_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${CHAT_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${CHAT_APP_NAME}
+          ports:
+            - containerPort: 6000
+          envFrom:
+            - secretRef:
+                name: ${CHAT_SECRET}
+          resources:
+            requests:
+              cpu: ${CHAT_REQ_CPU}
+              memory: ${CHAT_REQ_MEM}
+            limits:
+              cpu: ${CHAT_LIM_CPU}
+              memory: ${CHAT_LIM_MEM}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /
+              port: 6000
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 10
+          volumeMounts:
+            - mountPath: /storage
+              name: ${CHAT_VOLUME}
+            - mountPath: /etc/nginx/nginx.conf
+              name: nginx-conf
+              subPath: nginx.conf
+              readOnly: true
+      volumes:
+        - name: ${CHAT_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${CHAT_PVC}
+        - name: nginx-conf
+          configMap:
+            name: nginxconfig
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${CHAT_NODE_GROUP}
+
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${CHAT_DEPLOYMENT_NAME}
+  namespace: ${CHAT_NAMESPACE}
+spec:
+  maxReplicas: ${CHAT_MAX_REP} # maximum replicas of pods
+  minReplicas: ${CHAT_MIN_REP}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${CHAT_DEPLOYMENT_NAME} # TARGET name of the deployment the autoscaler need to be run on
+  targetCPUUtilizationPercentage: ${CHAT_TGT_CPU_PERCENT} # CPU maximum amount of use on the pod is set to 30%.
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${CHAT_NAMESPACE}
+  name: ${CHAT_SERVICE_NAME}
+spec:
+  ports:
+    - port: 80
+      targetPort: 6000
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: ${CHAT_APP_NAME}
+    namespace: ${CHAT_NAMESPACE}
+    alpha.eksctl.io/nodegroup-name: ${CHAT_NODE_GROUP}
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: ${CHAT_NAMESPACE}
+  name: ${CHAT_INGRESS_NAME}
+  annotations:
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/certificate-arn: ${CHAT_CERTIFICATE_ARN}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/load-balancer-name: ${CHAT_ALB}
+    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=ss-prd1-v2-alb-access-logs-new,access_logs.s3.prefix=chat-alb,idle_timeout.timeout_seconds=60
+    alb.ingress.kubernetes.io/wafv2-acl-arn: ${WAF_ARN}
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/target-node-labels: eks.amazonaws.com/nodegroup=${SWIS_NODE_GROUP}
+    kubernetes.io/ingress.class: ${ING_CLS_NAME}
+spec:
+  rules:
+    - host: ${CHAT_HOST_NAME}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ${CHAT_SERVICE_NAME}
+                port:
+                  number: 80

@@ -1,0 +1,17 @@
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ${DART_INGRESSROUTE_NAME}
+  namespace: ${DART_NAMESPACE}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`${DART_HOST_NAME}`)
+      kind: Rule
+      middlewares:
+        - name: ${DART_MIDDLEWARE_NAME}
+      services:
+        - name: ${DART_SERVICE_NAME}
+          port: 80

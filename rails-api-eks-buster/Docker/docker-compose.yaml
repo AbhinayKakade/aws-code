@@ -1,0 +1,13 @@
+version: "3.9"
+services:
+  webapp:
+    image: "${RAILS_API_IMAGE}:${TAG}"
+    build:
+        context: ..
+        dockerfile: ./Docker/Dockerfile
+        args:
+          - RAILS_ENV
+          - SECRET_KEY_BASE
+    ports:
+      - "3000:3000"
+    env_file: .env

@@ -1,0 +1,37 @@
+# for swis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: exp-prod-swis #${SWIS_NAMESPACE}
+  name: exp-prod-swis-service #${SWIS_SERVICE_NAME}
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  externalTrafficPolicy: Cluster
+  selector:
+    app.kubernetes.io/name: exp-prod-swis-app #${SWIS_APP_NAME}
+    namespace: exp-prod-swis #${SWIS_NAMESPACE}
+    cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}
+
+# for swis-facebook
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: exp-prod-swis #${SWIS_NAMESPACE}
+  name: exp-prod-swis-service-2 #${SWIS_SERVICE_NAME_FB}
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  externalTrafficPolicy: Cluster
+  selector:
+    app.kubernetes.io/name: exp-prod-swis-app-2 #${SWIS_APP_NAME_FB}
+    namespace: exp-prod-swis #${SWIS_NAMESPACE}
+    cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}

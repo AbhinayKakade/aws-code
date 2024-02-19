@@ -1,0 +1,15 @@
+---
+
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${SOCIAL_MONITOR_DEPLOYMENT_NAME}
+  namespace: ${SOCIAL_MONITOR_NAMESPACE}
+spec:
+  maxReplicas: 2 # maximum replicas of pods
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${SOCIAL_MONITOR_DEPLOYMENT_NAME} # TARGET name of the deployment the autoscaler need to be run on
+  targetCPUUtilizationPercentage: 80 # CPU maximum amount of use on the pod is set to 30%.

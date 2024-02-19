@@ -1,0 +1,146 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${RAILS_API_NAMESPACE}
+  
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ${RAILS_API_PV}
+spec:
+  capacity:
+    storage: ${RAILS_API_PV_SIZE}
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: efs-sc
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: ${EFS_ID}:/:${EFS_AP}
+    volumeAttributes:
+      encryptInTransit: "true"
+
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${RAILS_API_PVC}
+  namespace: ${RAILS_API_NAMESPACE}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  volumeName: ${RAILS_API_PV}
+  selector:
+    matchLabels:
+      name: ${RAILS_API_PV}
+  resources:
+    requests:
+      storage: ${RAILS_API_PV_SIZE}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_API_APP_NAME}
+      namespace: ${RAILS_API_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_API_APP_NAME}
+        namespace: ${RAILS_API_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_API_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${RAILS_API_APP_NAME}
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              memory: "13000Mi"
+            limits:
+              memory: "14000Mi"
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_API_VOLUME}
+      volumes:
+        - name: ${RAILS_API_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_API_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${RAILS_API_DEPLOYMENT_NAME}
+  namespace: ${RAILS_API_NAMESPACE}
+spec:
+  maxReplicas: 5 # maximum replicas of pods
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${RAILS_API_DEPLOYMENT_NAME} # TARGET name of the deployment the autoscaler need to be run on
+  targetCPUUtilizationPercentage: 80 # CPU maximum amount of use on the pod is set to 30%.
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_SERVICE_NAME}
+spec:
+  ports:
+    - port: 80
+      targetPort: 3000
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: ${RAILS_API_APP_NAME}
+    namespace: ${RAILS_API_NAMESPACE}
+    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_INGRESS_NAME}
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: ${RAILS_API_HOST_NAME}
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/certificate-arn: ${RAILS_API_CERTIFICATE_ARN}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/load-balancer-name: ${RAILS_API_ALB}
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=300
+    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:us-east-1:387102133919:regional/webacl/SS_WAF_v2_Prod/df5df1d1-99f5-420a-94e9-50398bd50b4f
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    
+spec:
+  ingressClassName: alb
+  rules:
+    - host: ${RAILS_API_HOST_NAME}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ${RAILS_API_SERVICE_NAME}
+                port:
+                  number: 80

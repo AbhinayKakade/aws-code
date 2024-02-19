@@ -1,0 +1,8 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: managed-certificate
+  namespace: exp-prod-swis
+spec:
+  domains:
+    - pro-gcp.experience.com

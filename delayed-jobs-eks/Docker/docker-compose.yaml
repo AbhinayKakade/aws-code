@@ -1,0 +1,11 @@
+version: "3.9"
+services:
+  webapp:
+    image: "${DELAYED_JOBS_IMAGE}:${TAG}"
+    build:
+        context: ..
+        dockerfile: ./Docker/Dockerfile
+        args:
+          - RAILS_ENV
+          - SECRET_KEY_BASE
+    env_file: .env

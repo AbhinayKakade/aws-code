@@ -1,0 +1,17 @@
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ${SWIS_INGRESSROUTE_NAME}
+  namespace: ${SWIS_NAMESPACE}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`${SWIS_HOST_NAME}`)
+      kind: Rule
+      middlewares:
+        - name: ${SWIS_MIDDLEWARE_NAME}
+      services:
+        - name: ${SWIS_SERVICE_NAME}
+          port: 80

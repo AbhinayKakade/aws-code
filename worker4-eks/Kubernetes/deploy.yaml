@@ -1,0 +1,41 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_DELAYED_JOBS_NAMESPACE}
+  name: ${RAILS_DELAYED_JOBS_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_DELAYED_JOBS_APP_NAME}
+      namespace: ${RAILS_DELAYED_JOBS_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_DELAYED_JOBS_NODE_GROUP}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_DELAYED_JOBS_APP_NAME}
+        namespace: ${RAILS_DELAYED_JOBS_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_DELAYED_JOBS_NODE_GROUP}
+    spec:
+      containers:
+      - image: ${RAILS_DELAYED_JOBS_REPOSITORY}:${TAG}
+        imagePullPolicy: Always
+        name: ${RAILS_DELAYED_JOBS_APP_NAME}
+        resources:
+          requests:
+            cpu: "750m"
+            memory: "2000Mi"
+          limits:
+            cpu: "1000m"
+            memory: "2200Mi"
+        volumeMounts:
+          - mountPath: /storage
+            name: ${WORKER_RAILSAPI_VOLUME}
+      volumes:
+        - name: ${WORKER_RAILSAPI_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${WORKER_RAILSAPI_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${WORKER_RAILSAPI_NODE_GROUP}
+

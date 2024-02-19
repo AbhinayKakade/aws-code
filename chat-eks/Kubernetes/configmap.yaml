@@ -1,0 +1,55 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: nginxconfig
+    namespace: exp-prod-chat
+data:
+    nginx.conf: |
+        user www-data;
+        worker_processes auto;
+        pid /run/nginx.pid;
+        include /etc/nginx/modules-enabled/*.conf;
+        events {
+            worker_connections 2048;
+        }
+        http {
+            sendfile on;
+            tcp_nopush on;
+            tcp_nodelay on;
+            keepalive_timeout 65;
+            types_hash_max_size 2048;
+            server_tokens off;
+            add_header X-XSS-Protection "1; mode=block" always;
+            add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+            include /etc/nginx/mime.types;
+            default_type application/octet-stream;
+            ssl_protocols TLSv1.2; # Dropping SSLv3, ref: POODLE;
+            ssl_prefer_server_ciphers on;
+            log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                            '$status $body_bytes_sent "$http_referer" '
+                            '"$http_user_agent" "$http_x_forwarded_for"'
+                            '$upstream_response_time';
+            gzip on;
+            upstream my_chatbot_upstream {
+                server 127.0.0.1:6000;
+                keepalive 65;
+            }
+            server {
+                listen 80;
+                server_name chat.experience.com;
+                access_log /var/log/nginx/access.log main;
+                error_log /var/log/nginx/error.log info;
+                location / {
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header Host $http_host;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection "upgrade";
+                    proxy_pass http://my_chatbot_upstream/;
+                    proxy_redirect off;
+                    proxy_read_timeout 65s;
+                }
+            }
+        }

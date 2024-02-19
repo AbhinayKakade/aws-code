@@ -1,0 +1,94 @@
+# For swis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${SWIS_NAMESPACE}
+  name: ${SWIS_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${SWIS_APP_NAME}
+      namespace: ${SWIS_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${SWIS_NODE_GROUP}
+  replicas: ${SWIS_MIN_REP}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${SWIS_APP_NAME}
+        namespace: ${SWIS_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${SWIS_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${SWIS_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${SWIS_APP_NAME}
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: ${SWIS_SECRET}
+          resources:
+            requests:
+              cpu: ${SWIS_REQ_CPU}
+              memory: ${SWIS_REQ_MEM}
+            limits:
+              cpu: ${SWIS_LIM_CPU}
+              memory: ${SWIS_LIM_MEM}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${SWIS_VOLUME}
+      volumes:
+        - name: ${SWIS_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${SWIS_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${SWIS_NODE_GROUP}
+# For swis-facebook
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   namespace: ${SWIS_NAMESPACE}
+#   name: ${SWIS_DEPLOYMENT_NAME_FB}
+# spec:
+#   selector:
+#     matchLabels:
+#       app.kubernetes.io/name: ${SWIS_APP_NAME_FB}
+#       namespace: ${SWIS_NAMESPACE}
+#       alpha.eksctl.io/nodegroup-name: ${SWIS_NODE_GROUP}
+#   replicas: ${SWIS_MIN_REP_FB}
+#   revisionHistoryLimit: 4
+#   template:
+#     metadata:
+#       labels:
+#         app.kubernetes.io/name: ${SWIS_APP_NAME_FB}
+#         namespace: ${SWIS_NAMESPACE}
+#         alpha.eksctl.io/nodegroup-name: ${SWIS_NODE_GROUP}
+#     spec:
+#       containers:
+#         - image: ${SWIS_REPOSITORY}:${TAG}
+#           imagePullPolicy: Always
+#           name: ${SWIS_APP_NAME_FB}
+#           ports:
+#             - containerPort: 3000
+#           envFrom:
+#             - secretRef:
+#                 name: ${SWIS_SECRET}
+#           resources:
+#             requests:
+#               cpu: ${SWIS_REQ_CPU_FB}
+#               memory: ${SWIS_REQ_MEM_FB}
+#             limits:
+#               cpu: ${SWIS_LIM_CPU_FB}
+#               memory: ${SWIS_LIM_MEM_FB}
+#           volumeMounts:
+#             - mountPath: /storage
+#               name: ${SWIS_VOLUME}
+#       volumes:
+#         - name: ${SWIS_VOLUME}
+#           persistentVolumeClaim:
+#             claimName: ${SWIS_PVC}
+#       nodeSelector:
+#         "eks.amazonaws.com/nodegroup": ${SWIS_NODE_GROUP}

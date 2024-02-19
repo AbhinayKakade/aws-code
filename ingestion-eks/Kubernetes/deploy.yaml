@@ -1,0 +1,56 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${INGESTION_NAMESPACE}
+  name: ${INGESTION_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${INGESTION_APP_NAME}
+      namespace: ${INGESTION_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${INGESTION_NODE_GROUP}
+  replicas: ${INGESTION_MIN_REP}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${INGESTION_APP_NAME}
+        namespace: ${INGESTION_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${INGESTION_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${INGESTION_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${INGESTION_APP_NAME}
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: ${INGESTION_SECRET}
+          resources:
+            requests:
+              cpu: ${INGESTION_REQ_CPU}
+              memory: ${INGESTION_REQ_MEM}
+            limits:
+              cpu: ${INGESTION_LIM_CPU}
+              memory: ${INGESTION_LIM_MEM}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /healthcheck
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 5
+          volumeMounts:
+            - mountPath: /storage
+              name: ${INGESTION_VOLUME}
+      volumes:
+        - name: ${INGESTION_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${INGESTION_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${INGESTION_NODE_GROUP}

@@ -1,0 +1,17 @@
+# Used for m2-swis only
+FROM node:17.8-alpine
+RUN apk add --update --no-cache curl py-pip make g++
+
+WORKDIR /var/lib/swis-api
+
+COPY ./ /var/lib/swis-api
+COPY ./Docker/mongodb.pem /var/lib/swis-api/ssl/mongodb.pem
+COPY ./Docker/swis.env /var/lib/swis-api
+COPY ./Docker/rootCA.pem /var/lib/swis-api/ssl/rootCA.pem
+
+RUN chmod 644 /var/lib/swis-api/ssl/* /var/lib/swis-api/swis.env
+
+RUN yarn install --production=true
+RUN source swis.env && yarn build
+
+CMD ["yarn", "start"]

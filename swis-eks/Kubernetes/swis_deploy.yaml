@@ -1,0 +1,269 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${SWIS_NAMESPACE}
+
+# ---
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: ${SWIS_PV}
+# spec:
+#   storageClassName: "standard-rwx"
+#   capacity:
+#     storage:  ${SWIS_PV_SIZE}
+#   accessModes:
+#     - ReadWriteMany
+#   persistentVolumeReclaimPolicy: Retain
+#   volumeMode: Filesystem
+#   csi:
+#     driver: filestore.csi.storage.gke.io
+#     volumeHandle: "modeInstance/us-east1-b/exp-swis/swis"
+#     volumeAttributes:
+#       ip: 10.178.192.10
+#       volume: swis
+
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: ${SWIS_PVC}
+#   namespace: ${SWIS_NAMESPACE}
+# spec:
+#   accessModes:
+#     - ReadWriteMany
+#   storageClassName: "standard-rwx"
+#   volumeName: ${SWIS_PV}
+#   resources:
+#     requests:
+#       storage: ${SWIS_PV_SIZE}
+
+# for swis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${SWIS_NAMESPACE}
+  name: ${SWIS_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${SWIS_APP_NAME}
+      namespace: ${SWIS_NAMESPACE}
+      cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}
+  replicas: ${SWIS_MIN_REP}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${SWIS_APP_NAME}
+        namespace: ${SWIS_NAMESPACE}
+        cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}
+    spec:
+      containers:
+        - image: us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/swis:latest
+          imagePullPolicy: Always
+          name: ${SWIS_APP_NAME}
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: ${SWIS_SECRET}
+          resources:
+            requests:
+              cpu: ${SWIS_REQ_CPU}
+              memory: ${SWIS_REQ_MEM}
+            limits:
+              cpu: ${SWIS_LIM_CPU}
+              memory: ${SWIS_LIM_MEM}
+      #     volumeMounts:
+      #       - mountPath: /storage
+      #         name: ${SWIS_VOLUME}
+      # volumes:
+      #   - name: ${SWIS_VOLUME}
+      #     persistentVolumeClaim:
+      #       claimName: ${SWIS_PVC}
+      nodeSelector:
+        cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}
+
+# For swis-facebook
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${SWIS_NAMESPACE}
+  name: ${SWIS_DEPLOYMENT_NAME_FB}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${SWIS_APP_NAME_FB}
+      namespace: ${SWIS_NAMESPACE}
+      cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}
+  replicas: ${SWIS_MIN_REP_FB}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${SWIS_APP_NAME_FB}
+        namespace: ${SWIS_NAMESPACE}
+        cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}
+    spec:
+      containers:
+        - image: us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/swis:latest
+          imagePullPolicy: Always
+          name: ${SWIS_APP_NAME_FB}
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: ${SWIS_SECRET}
+          resources:
+            requests:
+              cpu: ${SWIS_REQ_CPU_FB}
+              memory: ${SWIS_REQ_MEM_FB}
+            limits:
+              cpu: ${SWIS_LIM_CPU_FB}
+              memory: ${SWIS_LIM_MEM_FB}
+      #     volumeMounts:
+      #       - mountPath: /storage
+      #         name: ${SWIS_VOLUME}
+      # volumes:
+      #   - name: ${SWIS_VOLUME}
+      #     persistentVolumeClaim:
+      #       claimName: ${SWIS_PVC}
+      nodeSelector:
+        cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}
+
+# m2-swis hpa
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${SWIS_DEPLOYMENT_NAME}
+  namespace: ${SWIS_NAMESPACE}
+spec:
+  maxReplicas: ${SWIS_MAX_REP} # maximum replicas of pods
+  minReplicas: ${SWIS_MIN_REP}
+  behavior:
+    scaleDown:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 30
+        - type: Percent
+          value: 10
+          periodSeconds: 30
+      selectPolicy: Min
+      stabilizationWindowSeconds: 300
+    scaleUp:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+      selectPolicy: Max
+      stabilizationWindowSeconds: 0
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${SWIS_DEPLOYMENT_NAME}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: ${SWIS_TGT_CPU_PERCENT}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+# for swis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${SWIS_NAMESPACE}
+  name: ${SWIS_SERVICE_NAME}
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  externalTrafficPolicy: Cluster
+  selector:
+    app.kubernetes.io/name: ${SWIS_APP_NAME}
+    namespace: ${SWIS_NAMESPACE}
+    cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}
+
+# for swis-facebook
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${SWIS_NAMESPACE}
+  name: ${SWIS_SERVICE_NAME_FB}
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  externalTrafficPolicy: Cluster
+  selector:
+    app.kubernetes.io/name: ${SWIS_APP_NAME_FB}
+    namespace: ${SWIS_NAMESPACE}
+    cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}
+
+# Gateway for Swiss
+---
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1beta1
+metadata:
+  name: swiss-ui-gateway
+  namespace: ${SWIS_NAMESPACE}
+spec:
+  gatewayClassName: gke-l7-gxlb
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        options:
+          networking.gke.io/pre-shared-certs: swiss-ui-ssl
+  addresses:
+    - type: NamedAddress
+      value: exp-prod-swis
+
+# HTTP route for Swiss
+---
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1beta1
+metadata:
+  name: swiss-ui-route
+  namespace: ${SWIS_NAMESPACE}
+spec:
+  parentRefs:
+    - kind: Gateway
+      name: swiss-ui-gateway-http
+  hostnames:
+    - "pro-gcp.experience.com"
+  rules:
+    - backendRefs:
+        - name: ${SWIS_SERVICE_NAME}
+          port: 80
+    - matches:
+        - headers:
+            - name: User-Agent
+              value: "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
+      backendRefs:
+        - name: ${SWIS_SERVICE_NAME_FB}
+          port: 80

@@ -1,0 +1,19 @@
+---
+  kind: Gateway
+  apiVersion: gateway.networking.k8s.io/v1beta1
+  metadata:
+    name: swiss-ui-gateway
+    namespace: exp-prod-swis
+  spec:
+    gatewayClassName: gke-l7-gxlb
+    listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        options:
+          networking.gke.io/pre-shared-certs: swis-ui-ssl
+    addresses:
+    - type: NamedAddress
+      value: exp-prod-swis

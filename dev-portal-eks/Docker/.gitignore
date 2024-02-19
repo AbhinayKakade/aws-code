@@ -1,0 +1,3 @@
+# Ignore  in this directory
+.env
+dev_portal.env

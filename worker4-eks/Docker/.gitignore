@@ -1,0 +1,4 @@
+# Ignore  in this directory
+.env
+common_credentials.txt
+env_credentials.txt

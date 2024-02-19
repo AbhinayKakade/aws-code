@@ -1,0 +1,1252 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${RAILS_API_NAMESPACE}
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ${RAILS_API_PV}
+spec:
+  capacity:
+    storage: ${RAILS_API_PV_SIZE}
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: efs-sc
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: ${EFS_ID}:/:${EFS_AP}
+    volumeAttributes:
+      encryptInTransit: "true"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${RAILS_API_PVC}
+  namespace: ${RAILS_API_NAMESPACE}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  volumeName: ${RAILS_API_PV}
+  selector:
+    matchLabels:
+      name: ${RAILS_API_PV}
+  resources:
+    requests:
+      storage: ${RAILS_API_PV_SIZE}
+
+#/v2/main
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_DEPLOYMENT_NAME_MAIN}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_API_APP_NAME}
+      namespace: ${RAILS_API_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+  replicas: ${RAILS_API_MIN_REP_MAIN}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_API_APP_NAME}
+        namespace: ${RAILS_API_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_API_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${RAILS_API_APP_NAME}
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: ${RAILS_API_REQ_CPU}
+              memory: ${RAILS_API_REQ_MEM}
+            limits:
+              cpu: ${RAILS_API_LIM_CPU}
+              memory: ${RAILS_API_LIM_MEM}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_API_VOLUME}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /healthcheck
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 20
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+      volumes:
+        - name: ${RAILS_API_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_API_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+
+# /v2/core/cable
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_DEPLOYMENT_NAME_CABLE}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_API_APP_NAME_CABLE}
+      namespace: ${RAILS_API_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+  replicas: ${RAILS_API_MIN_REP_CABLE}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_API_APP_NAME_CABLE}
+        namespace: ${RAILS_API_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_API_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${RAILS_API_APP_NAME_CABLE}
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: ${RAILS_API_REQ_CPU_CABLE}
+              memory: ${RAILS_API_REQ_MEM_CABLE}
+            limits:
+              cpu: ${RAILS_API_LIM_CPU_CABLE}
+              memory: ${RAILS_API_LIM_MEM_CABLE}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_API_VOLUME}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /healthcheck
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 20
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+      volumes:
+        - name: ${RAILS_API_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_API_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+
+# /v2/core
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_DEPLOYMENT_NAME_CORE}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_API_APP_NAME_CORE}
+      namespace: ${RAILS_API_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+  replicas: ${RAILS_API_MIN_REP_CORE}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_API_APP_NAME_CORE}
+        namespace: ${RAILS_API_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_API_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${RAILS_API_APP_NAME_CORE}
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: ${RAILS_API_REQ_CPU_CORE}
+              memory: ${RAILS_API_REQ_MEM_CORE}
+            limits:
+              cpu: ${RAILS_API_LIM_CPU_CORE}
+              memory: ${RAILS_API_LIM_MEM_CORE}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_API_VOLUME}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /healthcheck
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 20
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+      volumes:
+        - name: ${RAILS_API_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_API_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+
+# /v2/admin
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_DEPLOYMENT_NAME_ADMIN}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_API_APP_NAME_ADMIN}
+      namespace: ${RAILS_API_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+  replicas: ${RAILS_API_MIN_REP_ADMIN}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_API_APP_NAME_ADMIN}
+        namespace: ${RAILS_API_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_API_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${RAILS_API_APP_NAME_ADMIN}
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: ${RAILS_API_REQ_CPU}
+              memory: ${RAILS_API_REQ_MEM}
+            limits:
+              cpu: ${RAILS_API_LIM_CPU}
+              memory: ${RAILS_API_LIM_MEM}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_API_VOLUME}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /healthcheck
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 20
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+      volumes:
+        - name: ${RAILS_API_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_API_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+
+# /v2/campaign
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_DEPLOYMENT_NAME_CAMPAIGN}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_API_APP_NAME_CAMPAIGN}
+      namespace: ${RAILS_API_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+  replicas: ${RAILS_API_MIN_REP_CAMPAIGN}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_API_APP_NAME_CAMPAIGN}
+        namespace: ${RAILS_API_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_API_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${RAILS_API_APP_NAME_CAMPAIGN}
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: ${RAILS_API_REQ_CPU}
+              memory: ${RAILS_API_REQ_MEM}
+            limits:
+              cpu: ${RAILS_API_LIM_CPU}
+              memory: ${RAILS_API_LIM_MEM}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_API_VOLUME}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /healthcheck
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 20
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+      volumes:
+        - name: ${RAILS_API_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_API_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+
+# /v2/public
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_DEPLOYMENT_NAME_PUBLIC}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_API_APP_NAME_PUBLIC}
+      namespace: ${RAILS_API_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+  replicas: ${RAILS_API_MIN_REP_PUBLIC}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_API_APP_NAME_PUBLIC}
+        namespace: ${RAILS_API_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_API_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${RAILS_API_APP_NAME_PUBLIC}
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: ${RAILS_API_REQ_CPU}
+              memory: ${RAILS_API_REQ_MEM}
+            limits:
+              cpu: ${RAILS_API_LIM_CPU}
+              memory: ${RAILS_API_LIM_MEM}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_API_VOLUME}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /healthcheck
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 20
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+      volumes:
+        - name: ${RAILS_API_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_API_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+
+# /v2/ipro
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_DEPLOYMENT_NAME_IPRO}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_API_APP_NAME_IPRO}
+      namespace: ${RAILS_API_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+  replicas: ${RAILS_API_MIN_REP_IPRO}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_API_APP_NAME_IPRO}
+        namespace: ${RAILS_API_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_API_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${RAILS_API_APP_NAME_IPRO}
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: ${RAILS_API_REQ_CPU}
+              memory: ${RAILS_API_REQ_MEM}
+            limits:
+              cpu: ${RAILS_API_LIM_CPU}
+              memory: ${RAILS_API_LIM_MEM}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_API_VOLUME}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /healthcheck
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 20
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+      volumes:
+        - name: ${RAILS_API_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_API_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+
+# Hpa Main
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${RAILS_API_DEPLOYMENT_NAME_MAIN}
+  namespace: ${RAILS_API_NAMESPACE}
+spec:
+  maxReplicas: ${RAILS_API_MAX_REP}
+  minReplicas: ${RAILS_API_MIN_REP}
+  behavior:
+    scaleDown:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 30
+        - type: Percent
+          value: 10
+          periodSeconds: 30
+      selectPolicy: Min
+      stabilizationWindowSeconds: 300
+    scaleUp:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+      selectPolicy: Max
+      stabilizationWindowSeconds: 0
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${RAILS_API_DEPLOYMENT_NAME_MAIN}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: ${RAILS_API_TGT_CPU_PERCENT}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+# Hpa - CABLE
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${RAILS_API_DEPLOYMENT_NAME_CABLE}
+  namespace: ${RAILS_API_NAMESPACE}
+spec:
+  maxReplicas: ${RAILS_API_MAX_REP_CABLE}
+  minReplicas: ${RAILS_API_MIN_REP_CABLE}
+  behavior:
+    scaleDown:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 30
+        - type: Percent
+          value: 10
+          periodSeconds: 30
+      selectPolicy: Min
+      stabilizationWindowSeconds: 300
+    scaleUp:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+      selectPolicy: Max
+      stabilizationWindowSeconds: 0
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${RAILS_API_DEPLOYMENT_NAME_CABLE}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: ${RAILS_API_TGT_CPU_PERCENT}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+# Hpa Core
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${RAILS_API_DEPLOYMENT_NAME_CORE}
+  namespace: ${RAILS_API_NAMESPACE}
+spec:
+  maxReplicas: ${RAILS_API_MAX_REP_CORE}
+  minReplicas: ${RAILS_API_MIN_REP_CORE}
+  behavior:
+    scaleDown:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 30
+        - type: Percent
+          value: 10
+          periodSeconds: 30
+      selectPolicy: Min
+      stabilizationWindowSeconds: 300
+    scaleUp:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+      selectPolicy: Max
+      stabilizationWindowSeconds: 0
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${RAILS_API_DEPLOYMENT_NAME_CORE}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: ${RAILS_API_TGT_CPU_PERCENT}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+# Hpa ADMIN
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${RAILS_API_DEPLOYMENT_NAME_ADMIN}
+  namespace: ${RAILS_API_NAMESPACE}
+spec:
+  maxReplicas: ${RAILS_API_MAX_REP}
+  minReplicas: ${RAILS_API_MIN_REP}
+  behavior:
+    scaleDown:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 30
+        - type: Percent
+          value: 10
+          periodSeconds: 30
+      selectPolicy: Min
+      stabilizationWindowSeconds: 300
+    scaleUp:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+      selectPolicy: Max
+      stabilizationWindowSeconds: 0
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${RAILS_API_DEPLOYMENT_NAME_ADMIN}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: ${RAILS_API_TGT_CPU_PERCENT}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+# Hpa _CAMPAIGN
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${RAILS_API_DEPLOYMENT_NAME_CAMPAIGN}
+  namespace: ${RAILS_API_NAMESPACE}
+spec:
+  maxReplicas: ${RAILS_API_MAX_REP}
+  minReplicas: ${RAILS_API_MIN_REP}
+  behavior:
+    scaleDown:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 30
+        - type: Percent
+          value: 10
+          periodSeconds: 30
+      selectPolicy: Min
+      stabilizationWindowSeconds: 300
+    scaleUp:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+      selectPolicy: Max
+      stabilizationWindowSeconds: 0
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${RAILS_API_DEPLOYMENT_NAME_CAMPAIGN}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: ${RAILS_API_TGT_CPU_PERCENT}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+# Hpa _PUBLIC
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${RAILS_API_DEPLOYMENT_NAME_PUBLIC}
+  namespace: ${RAILS_API_NAMESPACE}
+spec:
+  maxReplicas: ${RAILS_API_MAX_REP}
+  minReplicas: ${RAILS_API_MIN_REP}
+  behavior:
+    scaleDown:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 30
+        - type: Percent
+          value: 10
+          periodSeconds: 30
+      selectPolicy: Min
+      stabilizationWindowSeconds: 300
+    scaleUp:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+      selectPolicy: Max
+      stabilizationWindowSeconds: 0
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${RAILS_API_DEPLOYMENT_NAME_PUBLIC}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: ${RAILS_API_TGT_CPU_PERCENT}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+# Hpa _IPRO
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${RAILS_API_DEPLOYMENT_NAME_IPRO}
+  namespace: ${RAILS_API_NAMESPACE}
+spec:
+  maxReplicas: ${RAILS_API_MAX_REP}
+  minReplicas: ${RAILS_API_MIN_REP}
+  behavior:
+    scaleDown:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 30
+        - type: Percent
+          value: 10
+          periodSeconds: 30
+      selectPolicy: Min
+      stabilizationWindowSeconds: 300
+    scaleUp:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+      selectPolicy: Max
+      stabilizationWindowSeconds: 0
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${RAILS_API_DEPLOYMENT_NAME_IPRO}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: ${RAILS_API_TGT_CPU_PERCENT}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+# service main
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_SERVICE_NAME_MAIN}
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: ${RAILS_API_APP_NAME}
+    namespace: ${RAILS_API_NAMESPACE}
+    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+
+# service only
+# /v2/core/cable
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_SERVICE_NAME_CABLE}
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: ${RAILS_API_APP_NAME_CABLE}
+    namespace: ${RAILS_API_NAMESPACE}
+    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+
+# /v2/core
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_SERVICE_NAME_CORE}
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: ${RAILS_API_APP_NAME_CORE}
+    namespace: ${RAILS_API_NAMESPACE}
+    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+
+# /v2/core - 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_SERVICE_NAME_CORE_2}
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: ${RAILS_API_APP_NAME_CORE}
+    namespace: ${RAILS_API_NAMESPACE}
+    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+
+# /v2/admin
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_SERVICE_NAME_ADMIN}
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: ${RAILS_API_APP_NAME_ADMIN}
+    namespace: ${RAILS_API_NAMESPACE}
+    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+
+# /v2/campaign
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_SERVICE_NAME_CAMPAIGN}
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: ${RAILS_API_APP_NAME_CAMPAIGN}
+    namespace: ${RAILS_API_NAMESPACE}
+    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+
+# /v2/campaign - 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_SERVICE_NAME_CAMPAIGN_2}
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: ${RAILS_API_APP_NAME_CAMPAIGN}
+    namespace: ${RAILS_API_NAMESPACE}
+    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+
+# /v2/public
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_SERVICE_NAME_PUBLIC}
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: ${RAILS_API_APP_NAME_PUBLIC}
+    namespace: ${RAILS_API_NAMESPACE}
+    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+
+# /v2/ipro
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_SERVICE_NAME_IPRO}
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: ${RAILS_API_APP_NAME_IPRO}
+    namespace: ${RAILS_API_NAMESPACE}
+    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+
+#Ingress 1
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ${RAILS_API_INGRESS_NAME_ONE}
+  namespace: ${RAILS_API_NAMESPACE}
+  annotations:
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/certificate-arn: ${RAILS_API_CERTIFICATE_ARN_NEW}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/load-balancer-name: ${RAILS_API_ALB_ONE}
+    alb.ingress.kubernetes.io/ssl-policy: "ELBSecurityPolicy-TLS13-1-2-2021-06"
+    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=ss-prd1-v2-alb-access-logs-new,access_logs.s3.prefix=exp-prod-rails-api-alb-buster1,idle_timeout.timeout_seconds=300
+    # alb.ingress.kubernetes.io/wafv2-acl-arn: ${WAF_ARN}
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/target-node-labels: eks.amazonaws.com/nodegroup=${RAILS_API_NODE_GROUP}
+    kubernetes.io/ingress.class: alb
+    # health-check setting
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/healthcheck-path: /healthcheck
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "10"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/success-codes: "200"
+spec:
+  # ingressClassName: alb
+  rules:
+    - host: ${RAILS_API_HOST_NAME_NEW}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/v2/core/cable"
+            backend:
+              service:
+                name: ${RAILS_API_SERVICE_NAME_CABLE}
+                port:
+                  number: 80
+    - host: ${RAILS_API_HOST_NAME_NEW}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/v2/core"
+            backend:
+              service:
+                name: ${RAILS_API_SERVICE_NAME_CORE}
+                port:
+                  number: 80
+    - host: ${RAILS_API_HOST_NAME_NEW}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/v2/prl"
+            backend:
+              service:
+                name: ${RAILS_API_SERVICE_NAME_UBUNTU}
+                port:
+                  number: 80
+    - host: ${RAILS_API_HOST_NAME_NEW}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/v2/admin"
+            backend:
+              service:
+                name: ${RAILS_API_SERVICE_NAME_ADMIN}
+                port:
+                  number: 80
+    - host: ${RAILS_API_HOST_NAME_NEW}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/v2/campaign"
+            backend:
+              service:
+                name: ${RAILS_API_SERVICE_NAME_CAMPAIGN}
+                port:
+                  number: 80
+    - host: ${RAILS_API_HOST_NAME_NEW}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/v2/public"
+            backend:
+              service:
+                name: ${RAILS_API_SERVICE_NAME_PUBLIC}
+                port:
+                  number: 80
+    - host: ${RAILS_API_HOST_NAME_NEW}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/v2/ipro"
+            backend:
+              service:
+                name: ${RAILS_API_SERVICE_NAME_IPRO}
+                port:
+                  number: 80
+    - host: ${RAILS_API_HOST_NAME_NEW}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: ${RAILS_API_SERVICE_NAME_MAIN}
+                port:
+                  number: 80
+
+#Ingress 2
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ${RAILS_API_INGRESS_NAME_TWO}
+  namespace: ${RAILS_API_NAMESPACE}
+  annotations:
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/certificate-arn: ${RAILS_API_CERTIFICATE_ARN_NEW}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/load-balancer-name: ${RAILS_API_ALB_TWO}
+    alb.ingress.kubernetes.io/ssl-policy: "ELBSecurityPolicy-TLS13-1-2-2021-06"
+    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=ss-prd1-v2-alb-access-logs-new,access_logs.s3.prefix=exp-prod-rails-api-alb-buster2,idle_timeout.timeout_seconds=300
+    # alb.ingress.kubernetes.io/wafv2-acl-arn: ${WAF_ARN}
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/target-node-labels: eks.amazonaws.com/nodegroup=${RAILS_API_NODE_GROUP}
+    kubernetes.io/ingress.class: alb
+    # health-check setting
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/healthcheck-path: /healthcheck
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "10"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/success-codes: "200"
+spec:
+  # ingressClassName: alb
+  rules:
+    - host: ${RAILS_API_HOST_NAME_NEW}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/v2/core/cable"
+            backend:
+              service:
+                name: ${RAILS_API_SERVICE_NAME_CABLE}
+                port:
+                  number: 80
+    - host: ${RAILS_API_HOST_NAME_NEW}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/v2/core"
+            backend:
+              service:
+                name: ${RAILS_API_SERVICE_NAME_CORE_2}
+                port:
+                  number: 80
+    - host: ${RAILS_API_HOST_NAME_NEW}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/v2/prl"
+            backend:
+              service:
+                name: ${RAILS_API_SERVICE_NAME_UBUNTU}
+                port:
+                  number: 80
+    - host: ${RAILS_API_HOST_NAME_NEW}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/v2/admin"
+            backend:
+              service:
+                name: ${RAILS_API_SERVICE_NAME_ADMIN}
+                port:
+                  number: 80
+    - host: ${RAILS_API_HOST_NAME_NEW}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/v2/campaign"
+            backend:
+              service:
+                name: ${RAILS_API_SERVICE_NAME_CAMPAIGN_2}
+                port:
+                  number: 80
+    - host: ${RAILS_API_HOST_NAME_NEW}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/v2/public"
+            backend:
+              service:
+                name: ${RAILS_API_SERVICE_NAME_PUBLIC}
+                port:
+                  number: 80
+    - host: ${RAILS_API_HOST_NAME_NEW}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/v2/ipro"
+            backend:
+              service:
+                name: ${RAILS_API_SERVICE_NAME_IPRO}
+                port:
+                  number: 80
+    - host: ${RAILS_API_HOST_NAME_NEW}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: ${RAILS_API_SERVICE_NAME_MAIN}
+                port:
+                  number: 80

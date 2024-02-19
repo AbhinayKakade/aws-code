@@ -1,0 +1,13 @@
+version: "3.9"
+services:
+  webapp:
+    image: "${IPRO_IMAGE}:${TAG}"
+    build:
+      context: ..
+      dockerfile: ./Docker/Dockerfile
+      args:
+        - USERNAME
+        - PASSWORD
+    ports:
+      - "8080:8080"
+    env_file: .env

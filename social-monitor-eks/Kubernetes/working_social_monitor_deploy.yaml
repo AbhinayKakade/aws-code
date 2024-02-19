@@ -1,0 +1,193 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${SOCIAL_MONITOR_NAMESPACE}
+
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ${SOCIAL_MONITOR_PV}
+spec:
+  capacity:
+    storage: ${SOCIAL_MONITOR_PV_SIZE}
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: efs-sc
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: ${EFS_ID}:/:${EFS_AP}
+    volumeAttributes:
+      encryptInTransit: "true"
+
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${SOCIAL_MONITOR_PVC}
+  namespace: ${SOCIAL_MONITOR_NAMESPACE}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  volumeName: ${SOCIAL_MONITOR_PV}
+  selector:
+    matchLabels:
+      name: ${SOCIAL_MONITOR_PV}
+  resources:
+    requests:
+      storage: ${SOCIAL_MONITOR_PV_SIZE}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${SOCIAL_MONITOR_NAMESPACE}
+  name: ${SOCIAL_MONITOR_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${SOCIAL_MONITOR_APP_NAME}
+      namespace: ${SOCIAL_MONITOR_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${SOCIAL_MONITOR_NODE_GROUP}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${SOCIAL_MONITOR_APP_NAME}
+        namespace: ${SOCIAL_MONITOR_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${SOCIAL_MONITOR_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${SOCIAL_MONITOR_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${SOCIAL_MONITOR_APP_NAME}
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: ${SOCIAL_MONITOR_SECRET}
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "5000Mi"
+            limits:
+              cpu: "1200m"
+              memory: "6000Mi"
+          volumeMounts:
+            - mountPath: /storage
+              name: ${SOCIAL_MONITOR_VOLUME}
+      volumes:
+        - name: ${SOCIAL_MONITOR_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${SOCIAL_MONITOR_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${SOCIAL_MONITOR_NODE_GROUP} 
+
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${SOCIAL_MONITOR_DEPLOYMENT_NAME}
+  namespace: ${SOCIAL_MONITOR_NAMESPACE}
+spec:
+  maxReplicas: 2 # maximum replicas of pods
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${SOCIAL_MONITOR_DEPLOYMENT_NAME} # TARGET name of the deployment the autoscaler need to be run on
+  targetCPUUtilizationPercentage: 80 # CPU maximum amount of use on the pod is set to 30%.
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${SOCIAL_MONITOR_NAMESPACE}
+  name: ${SOCIAL_MONITOR_SERVICE_NAME}
+spec:
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: ${SOCIAL_MONITOR_APP_NAME}
+    namespace: ${SOCIAL_MONITOR_NAMESPACE}
+    alpha.eksctl.io/nodegroup-name: ${SOCIAL_MONITOR_NODE_GROUP}
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: ${SOCIAL_MONITOR_MIDDLEWARE_NAME}
+  namespace: ${SOCIAL_MONITOR_NAMESPACE}
+spec:
+  headers:
+    customResponseHeaders:
+      X-XSS-Protection: "1; mode=block"
+      Referrer-Policy: "strict-origin-when-cross-origin"
+      Permissions-Policy: "geolocation=(self), camera=(self), microphone=(self), autoplay=(self)"
+      X-Content-Type-Options: "nosniff"
+      X-Frame-Options: "sameorigin"
+      X-Permitted-Cross-Domain-Policies: "none"
+      Strict-Transport-Security: "max-age=31536000; includeSubdomains"
+      Cross-Origin-Embedder-Policy: "unsafe-none"
+      Cross-Origin-Opener-Policy: "unsafe-none"
+      Cross-Origin-Resource-Policy: "same-origin"
+      Cache-Control: "no-cache, no-store, must-revalidate"
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ${SOCIAL_MONITOR_INGRESSROUTE_NAME}
+  namespace: ${SOCIAL_MONITOR_NAMESPACE}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`${SOCIAL_MONITOR_HOST_NAME}`)
+      kind: Rule
+      middlewares:
+        - name: ${SOCIAL_MONITOR_MIDDLEWARE_NAME}
+      services:
+        - name: ${SOCIAL_MONITOR_SERVICE_NAME}
+          port: 80
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: ${TRAEFIK_SERVICE_NAMESPACE}
+  name: ${SOCIAL_MONITOR_INGRESS_NAME}
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: ${SOCIAL_MONITOR_HOST_NAME}
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/certificate-arn: ${SOCIAL_MONITOR_CERTIFICATE_ARN}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/load-balancer-name: ${SOCIAL_MONITOR_ALB}
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=60
+    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:us-east-1:387102133919:regional/webacl/SS_WAF_v2_Prod/df5df1d1-99f5-420a-94e9-50398bd50b4f
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+  labels:
+    app: ${TRAEFIK_SERVICE_NAMESPACE}
+spec:
+  ingressClassName: alb
+  rules:
+    - host: ${SOCIAL_MONITOR_HOST_NAME}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ${TRAEFIK_SERVICE_NAMESPACE}
+                port:
+                  number: 80

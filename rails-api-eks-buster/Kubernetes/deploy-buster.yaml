@@ -1,0 +1,476 @@
+#/v2/main
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_DEPLOYMENT_NAME_MAIN}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_API_APP_NAME}
+      namespace: ${RAILS_API_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+  replicas: ${RAILS_API_MIN_REP_MAIN}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_API_APP_NAME}
+        namespace: ${RAILS_API_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_API_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${RAILS_API_APP_NAME}
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: ${RAILS_API_REQ_CPU}
+              memory: ${RAILS_API_REQ_MEM}
+            limits:
+              cpu: ${RAILS_API_LIM_CPU}
+              memory: ${RAILS_API_LIM_MEM}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_API_VOLUME}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /healthcheck
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 20
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+      volumes:
+        - name: ${RAILS_API_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_API_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+
+# /v2/core/cable
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_DEPLOYMENT_NAME_CABLE}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_API_APP_NAME_CABLE}
+      namespace: ${RAILS_API_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+  replicas: ${RAILS_API_MIN_REP_CABLE}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_API_APP_NAME_CABLE}
+        namespace: ${RAILS_API_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_API_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${RAILS_API_APP_NAME_CABLE}
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: ${RAILS_API_REQ_CPU_CABLE}
+              memory: ${RAILS_API_REQ_MEM_CABLE}
+            limits:
+              cpu: ${RAILS_API_LIM_CPU_CABLE}
+              memory: ${RAILS_API_LIM_MEM_CABLE}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_API_VOLUME}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /healthcheck
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 20
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+      volumes:
+        - name: ${RAILS_API_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_API_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+
+# /v2/core
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_DEPLOYMENT_NAME_CORE}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_API_APP_NAME_CORE}
+      namespace: ${RAILS_API_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+  replicas: ${RAILS_API_MIN_REP_CORE}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_API_APP_NAME_CORE}
+        namespace: ${RAILS_API_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_API_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${RAILS_API_APP_NAME_CORE}
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: ${RAILS_API_REQ_CPU_CORE}
+              memory: ${RAILS_API_REQ_MEM_CORE}
+            limits:
+              cpu: ${RAILS_API_LIM_CPU_CORE}
+              memory: ${RAILS_API_LIM_MEM_CORE}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_API_VOLUME}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /healthcheck
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 20
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+      volumes:
+        - name: ${RAILS_API_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_API_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+
+# /v2/admin
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_DEPLOYMENT_NAME_ADMIN}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_API_APP_NAME_ADMIN}
+      namespace: ${RAILS_API_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+  replicas: ${RAILS_API_MIN_REP_ADMIN}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_API_APP_NAME_ADMIN}
+        namespace: ${RAILS_API_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_API_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${RAILS_API_APP_NAME_ADMIN}
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: ${RAILS_API_REQ_CPU}
+              memory: ${RAILS_API_REQ_MEM}
+            limits:
+              cpu: ${RAILS_API_LIM_CPU}
+              memory: ${RAILS_API_LIM_MEM}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_API_VOLUME}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /healthcheck
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 20
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+      volumes:
+        - name: ${RAILS_API_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_API_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+
+# /v2/campaign
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_DEPLOYMENT_NAME_CAMPAIGN}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_API_APP_NAME_CAMPAIGN}
+      namespace: ${RAILS_API_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+  replicas: ${RAILS_API_MIN_REP_CAMPAIGN}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_API_APP_NAME_CAMPAIGN}
+        namespace: ${RAILS_API_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_API_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${RAILS_API_APP_NAME_CAMPAIGN}
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: ${RAILS_API_REQ_CPU}
+              memory: ${RAILS_API_REQ_MEM}
+            limits:
+              cpu: ${RAILS_API_LIM_CPU}
+              memory: ${RAILS_API_LIM_MEM}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_API_VOLUME}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /healthcheck
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 20
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+      volumes:
+        - name: ${RAILS_API_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_API_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+
+# /v2/public
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_DEPLOYMENT_NAME_PUBLIC}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_API_APP_NAME_PUBLIC}
+      namespace: ${RAILS_API_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+  replicas: ${RAILS_API_MIN_REP_PUBLIC}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_API_APP_NAME_PUBLIC}
+        namespace: ${RAILS_API_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_API_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${RAILS_API_APP_NAME_PUBLIC}
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: ${RAILS_API_REQ_CPU}
+              memory: ${RAILS_API_REQ_MEM}
+            limits:
+              cpu: ${RAILS_API_LIM_CPU}
+              memory: ${RAILS_API_LIM_MEM}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_API_VOLUME}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /healthcheck
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 20
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+      volumes:
+        - name: ${RAILS_API_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_API_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+
+# /v2/ipro
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_DEPLOYMENT_NAME_IPRO}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_API_APP_NAME_IPRO}
+      namespace: ${RAILS_API_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+  replicas: ${RAILS_API_MIN_REP_IPRO}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_API_APP_NAME_IPRO}
+        namespace: ${RAILS_API_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_API_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${RAILS_API_APP_NAME_IPRO}
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: ${RAILS_API_REQ_CPU}
+              memory: ${RAILS_API_REQ_MEM}
+            limits:
+              cpu: ${RAILS_API_LIM_CPU}
+              memory: ${RAILS_API_LIM_MEM}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_API_VOLUME}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /healthcheck
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 20
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+      volumes:
+        - name: ${RAILS_API_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_API_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}

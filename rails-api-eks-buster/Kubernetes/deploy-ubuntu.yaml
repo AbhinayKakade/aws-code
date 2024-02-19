@@ -1,0 +1,67 @@
+# /v2/prl
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_API_NAMESPACE}
+  name: ${RAILS_API_DEPLOYMENT_NAME_UBUNTU}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_API_APP_NAME_UBUNTU}
+      namespace: ${RAILS_API_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+  replicas: ${RAILS_API_MIN_REP_UBUNTU}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_API_APP_NAME_UBUNTU}
+        namespace: ${RAILS_API_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_API_REPOSITORY_UBUNTU}:${TAG}
+          imagePullPolicy: Always
+          name: ${RAILS_API_APP_NAME_UBUNTU}
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: ${RAILS_API_REQ_CPU_UBUNTU}
+              memory: ${RAILS_API_REQ_MEM_UBUNTU}
+            limits:
+              cpu: ${RAILS_API_LIM_CPU_UBUNTU}
+              memory: ${RAILS_API_LIM_MEM_UBUNTU}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_API_VOLUME}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /healthcheck
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 20
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+      volumes:
+        - name: ${RAILS_API_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_API_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}

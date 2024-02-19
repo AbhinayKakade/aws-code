@@ -1,0 +1,143 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${SURVEY_TAKER_NAMESPACE}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${SURVEY_TAKER_NAMESPACE}
+  name: ${SURVEY_TAKER_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${SURVEY_TAKER_APP_NAME}
+      namespace: ${SURVEY_TAKER_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${SURVEY_TAKER_NODE_GROUP}
+  replicas: 1
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${SURVEY_TAKER_APP_NAME}
+        namespace: ${SURVEY_TAKER_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${SURVEY_TAKER_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${SURVEY_TAKER_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${SURVEY_TAKER_APP_NAME}
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: ${SURVEY_TAKER_SECRET}
+          resources:
+            limits:
+              cpu: "0.5"
+            requests:
+              cpu: "0.2"
+
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${SURVEY_TAKER_DEPLOYMENT_NAME}
+  namespace: ${SURVEY_TAKER_NAMESPACE}
+spec:
+  maxReplicas: 2 # maximum replicas of pods
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${SURVEY_TAKER_DEPLOYMENT_NAME} # TARGET name of the deployment the autoscaler need to be run on
+  targetCPUUtilizationPercentage: 80 # CPU maximum amount of use on the pod is set to 30%.
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${SURVEY_TAKER_NAMESPACE}
+  name: ${SURVEY_TAKER_SERVICE_NAME}
+spec:
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: ${SURVEY_TAKER_APP_NAME}
+    namespace: ${SURVEY_TAKER_NAMESPACE}
+    alpha.eksctl.io/nodegroup-name: ${SURVEY_TAKER_NODE_GROUP}
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: ${SURVEY_TAKER_MIDDLEWARE_NAME}
+  namespace: ${SURVEY_TAKER_NAMESPACE}
+spec:
+  headers:
+    customResponseHeaders:
+      X-XSS-Protection: "1; mode=block"
+      Referrer-Policy: "strict-origin-when-cross-origin"
+      Permissions-Policy: "geolocation=(self), camera=(self), microphone=(self), autoplay=(self)"
+      X-Content-Type-Options: "nosniff"
+      X-Frame-Options: "sameorigin"
+      X-Permitted-Cross-Domain-Policies: "none"
+      Strict-Transport-Security: "max-age=31536000; includeSubdomains; preload"
+      Cross-Origin-Embedder-Policy: "unsafe-none"
+      Cross-Origin-Opener-Policy: "unsafe-none"
+      Cross-Origin-Resource-Policy: "same-origin"
+      Cache-Control: "no-cache, no-store, must-revalidate"
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ${SURVEY_TAKER_INGRESSROUTE_NAME}
+  namespace: ${SURVEY_TAKER_NAMESPACE}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`${SURVEY_TAKER_HOST_NAME}`)
+      kind: Rule
+      middlewares:
+        - name: ${SURVEY_TAKER_MIDDLEWARE_NAME}
+      services:
+        - name: ${SURVEY_TAKER_SERVICE_NAME}
+          port: 80
+
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  namespace: ${TRAEFIK_SERVICE_NAMESPACE}
+  name: ${SURVEY_TAKER_INGRESS_NAME}
+  annotations:
+    alb.ingress.kubernetes.io/actions.ssl-redirect:
+      '{"Type": "redirect", "RedirectConfig":
+      { "Protocol": "HTTPS", "Port": "443", "StatusCode": "HTTP_301"}}'
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/certificate-arn: ${SURVEY_TAKER_CERTIFICATE_ARN}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    kubernetes.io/ingress.class: alb
+  labels:
+    app: ${TRAEFIK_SERVICE_NAMESPACE}
+spec:
+  rules:
+    - host: ${SURVEY_TAKER_HOST_NAME}
+      http:
+        paths:
+          - path: /*
+            backend:
+              serviceName: ssl-redirect
+              servicePort: use-annotation
+          - path: /*
+            backend:
+              serviceName: ${TRAEFIK_SERVICE_NAMESPACE}
+              servicePort: 80

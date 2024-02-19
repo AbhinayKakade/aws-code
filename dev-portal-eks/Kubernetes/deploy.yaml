@@ -1,0 +1,34 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${DEV_PORTAL_NAMESPACE}
+  name: ${DEV_PORTAL_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${DEV_PORTAL_APP_NAME}
+      namespace: ${DEV_PORTAL_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${DEV_PORTAL_NODE_GROUP}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${DEV_PORTAL_APP_NAME}
+        namespace: ${DEV_PORTAL_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${DEV_PORTAL_NODE_GROUP}
+    spec:
+      containers:
+      - image: ${DEV_PORTAL_REPOSITORY}:${TAG}
+        imagePullPolicy: Always
+        name: ${DEV_PORTAL_APP_NAME}
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "350Mi"
+          limits:
+            cpu: "200m"
+            memory: "450Mi"
+          

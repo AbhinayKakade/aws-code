@@ -1,0 +1,161 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${DART_PUBLICAPI_NAMESPACE}
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ${DART_PUBLICAPI_PV}
+spec:
+  capacity:
+    storage: ${DART_PUBLICAPI_PV_SIZE}
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: efs-sc
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: ${EFS_ID}:/:${EFS_AP}
+    volumeAttributes:
+      encryptInTransit: "true"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${DART_PUBLICAPI_PVC}
+  namespace: ${DART_PUBLICAPI_NAMESPACE}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  volumeName: ${DART_PUBLICAPI_PV}
+  selector:
+    matchLabels:
+      name: ${DART_PUBLICAPI_PV}
+  resources:
+    requests:
+      storage: ${DART_PUBLICAPI_PV_SIZE}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${DART_PUBLICAPI_NAMESPACE}
+  name: ${DART_PUBLICAPI_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${DART_PUBLICAPI_APP_NAME}
+      namespace: ${DART_PUBLICAPI_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${DART_NODE_GROUP}
+  replicas: ${DART_PUBLICAPI_MIN_REP}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${DART_PUBLICAPI_APP_NAME}
+        namespace: ${DART_PUBLICAPI_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${DART_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${DART_PUBLICAPI_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${DART_PUBLICAPI_APP_NAME}
+          ports:
+            - containerPort: 7000
+          envFrom:
+            - secretRef:
+                name: ${DART_SECRET}
+          resources:
+            requests:
+              cpu: ${DART_PUBLICAPI_REQ_CPU}
+              memory: ${DART_PUBLICAPI_REQ_MEM}
+            limits:
+              cpu: ${DART_PUBLICAPI_LIM_CPU}
+              memory: ${DART_PUBLICAPI_LIM_MEM}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /
+              port: 7000
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 5
+          volumeMounts:
+            - mountPath: /storage
+              name: ${DART_PUBLICAPI_VOLUME}
+      volumes:
+        - name: ${DART_PUBLICAPI_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${DART_PUBLICAPI_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${DART_NODE_GROUP}
+
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${DART_PUBLICAPI_DEPLOYMENT_NAME}
+  namespace: ${DART_PUBLICAPI_NAMESPACE}
+spec:
+  maxReplicas: ${DART_PUBLICAPI_MAX_REP} # maximum replicas of pods
+  minReplicas: ${DART_PUBLICAPI_MIN_REP}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${DART_PUBLICAPI_DEPLOYMENT_NAME} # TARGET name of the deployment the autoscaler need to be run on
+  targetCPUUtilizationPercentage: ${DART_PUBLICAPI_TGT_CPU_PERCENT} # CPU maximum amount of use on the pod is set to 30%.
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${DART_PUBLICAPI_NAMESPACE}
+  name: ${DART_PUBLICAPI_SERVICE_NAME}
+spec:
+  ports:
+    - port: 80
+      targetPort: 7000
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: ${DART_PUBLICAPI_APP_NAME}
+    namespace: ${DART_PUBLICAPI_NAMESPACE}
+    alpha.eksctl.io/nodegroup-name: ${DART_NODE_GROUP}
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: ${DART_PUBLICAPI_NAMESPACE}
+  name: ${DART_PUBLICAPI_INGRESS_NAME}
+  annotations:
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/certificate-arn: ${DART_PUBLICAPI_CERTIFICATE_ARN}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/load-balancer-name: ${DART_PUBLICAPI_ALB}
+    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=ss-prd1-v2-alb-access-logs-new,access_logs.s3.prefix=publicapi-alb,idle_timeout.timeout_seconds=60
+    alb.ingress.kubernetes.io/wafv2-acl-arn: ${WAF_ARN}
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/target-node-labels: eks.amazonaws.com/nodegroup=${SWIS_NODE_GROUP}
+    kubernetes.io/ingress.class: ${ING_CLS_NAME}
+spec:
+  rules:
+    - host: ${DART_PUBLICAPI_HOST_NAME}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ${DART_PUBLICAPI_SERVICE_NAME}
+                port:
+                  number: 80

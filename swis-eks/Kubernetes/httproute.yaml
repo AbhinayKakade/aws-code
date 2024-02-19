@@ -1,0 +1,22 @@
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1beta1
+metadata:
+  name: swiss-ui-route
+  namespace: exp-prod-swis
+spec:
+  parentRefs:
+  - kind: Gateway
+    name: swiss-ui-gateway
+  hostnames:
+  - "pro-gcp.experience.com"
+  rules:
+  - backendRefs:
+    - name: exp-prod-swis-service
+      port: 80
+  - matches:
+    - headers:
+      - name: User-Agent
+        value: 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)'
+    backendRefs:
+    - name: exp-prod-swis-service-2
+      port: 80

@@ -1,0 +1,192 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${DART_NAMESPACE}
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ${DART_PV}
+spec:
+  capacity:
+    storage: ${DART_PV_SIZE}
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: efs-sc
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: ${EFS_ID}:/:${EFS_AP}
+    volumeAttributes:
+      encryptInTransit: "true"
+
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${DART_PVC}
+  namespace: ${DART_NAMESPACE}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  volumeName: ${DART_PV}
+  selector:
+    matchLabels:
+      name: ${DART_PV}
+  resources:
+    requests:
+      storage: ${DART_PV_SIZE}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${DART_NAMESPACE}
+  name: ${DART_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${DART_APP_NAME}
+      namespace: ${DART_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${DART_NODE_GROUP}
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${DART_APP_NAME}
+        namespace: ${DART_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${DART_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${DART_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${DART_APP_NAME}
+          ports:
+            - containerPort: 5000
+          envFrom:
+            - secretRef:
+                name: ${DART_SECRET}
+          resources:
+            requests:
+              cpu: "1200m"
+              memory: "4000Mi"
+            limits:
+              cpu: "1500m"
+              memory: "5000Mi"
+          volumeMounts:
+            - mountPath: /storage
+              name: ${DART_VOLUME}
+      volumes:
+        - name: ${DART_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${DART_PVC}    
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${DART_NODE_GROUP}
+
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${DART_DEPLOYMENT_NAME}
+  namespace: ${DART_NAMESPACE}
+spec:
+  maxReplicas: 3 # maximum replicas of pods
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${DART_DEPLOYMENT_NAME} # TARGET name of the deployment the autoscaler need to be run on
+  targetCPUUtilizationPercentage: 80 # CPU maximum amount of use on the pod is set to 30%.
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${DART_NAMESPACE}
+  name: ${DART_SERVICE_NAME}
+spec:
+  ports:
+    - port: 80
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: ${DART_APP_NAME}
+    namespace: ${DART_NAMESPACE}
+    alpha.eksctl.io/nodegroup-name: ${DART_NODE_GROUP}
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: ${DART_MIDDLEWARE_NAME}
+  namespace: ${DART_NAMESPACE}
+spec:
+  headers:
+    customResponseHeaders:
+      X-XSS-Protection: "1; mode=block"
+      Referrer-Policy: "strict-origin-when-cross-origin"
+      Permissions-Policy: "geolocation=(self), camera=(self), microphone=(self), autoplay=(self)"
+      X-Content-Type-Options: "nosniff"
+      X-Frame-Options: "sameorigin"
+      X-Permitted-Cross-Domain-Policies: "none"
+      Strict-Transport-Security: "max-age=31536000; includeSubdomains; preload"
+      Cross-Origin-Embedder-Policy: "unsafe-none"
+      Cross-Origin-Opener-Policy: "unsafe-none"
+      Cross-Origin-Resource-Policy: "same-origin"
+      Cache-Control: "no-cache, no-store, must-revalidate"
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ${DART_INGRESSROUTE_NAME}
+  namespace: ${DART_NAMESPACE}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`${DART_HOST_NAME}`)
+      kind: Rule
+      middlewares:
+        - name: ${DART_MIDDLEWARE_NAME}
+      services:
+        - name: ${DART_SERVICE_NAME}
+          port: 80
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: ${TRAEFIK_SERVICE_NAMESPACE}
+  name: ${DART_INGRESS_NAME}
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: ${DART_HOST_NAME}
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/certificate-arn: ${DART_CERTIFICATE_ARN}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/load-balancer-name: ${DART_ALB}
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=60
+    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:us-east-1:387102133919:regional/webacl/SS_WAF_v2_Prod/df5df1d1-99f5-420a-94e9-50398bd50b4f
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+  labels:
+    app: ${TRAEFIK_SERVICE_NAMESPACE}
+spec:
+  ingressClassName: alb
+  rules:
+    - host: ${DART_HOST_NAME}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ${TRAEFIK_SERVICE_NAMESPACE}
+                port:
+                  number: 80

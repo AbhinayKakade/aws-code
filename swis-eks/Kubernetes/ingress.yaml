@@ -1,0 +1,32 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: exp-prod-swis
+  name: exp-prod-swis-ingress
+  annotations:
+    kubernetes.io/ingress.allow-http: "false"
+    networking.gke.io/managed-certificates: managed-certificate
+    kubernetes.io/ingress.global-static-ip-name: exp-prod-swis
+spec:
+  rules:
+    - host: "pro-gcp.experience.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: exp-prod-swis-service-2
+                port:
+                  number: 80
+    - host: "pro-gcp.experience.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: exp-prod-swis-service
+                port:
+                  number: 80

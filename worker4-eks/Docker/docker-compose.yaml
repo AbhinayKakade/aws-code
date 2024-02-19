@@ -1,0 +1,11 @@
+version: "3.9"
+services:
+  webapp:
+    image: "${WORKER_REPOSITORY}:${TAG}"
+    build:
+        context: ..
+        dockerfile: ./Docker/Dockerfile
+        args:
+          - RAILS_ENV
+          - SECRET_KEY_BASE
+    env_file: .env

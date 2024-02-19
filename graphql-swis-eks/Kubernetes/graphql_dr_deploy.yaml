@@ -1,0 +1,197 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${GQLSWIS_NAMESPACE}
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ${GQLSWIS_PV}
+spec:
+  capacity:
+    storage: ${GQLSWIS_PV_SIZE}
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: efs-sc
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: ${EFS_ID}
+    volumeAttributes:
+      encryptInTransit: "true"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${GQLSWIS_PVC}
+  namespace: ${GQLSWIS_NAMESPACE}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  volumeName: ${GQLSWIS_PV}
+  selector:
+    matchLabels:
+      name: ${GQLSWIS_PV}
+  resources:
+    requests:
+      storage: ${GQLSWIS_PV_SIZE}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${GQLSWIS_NAMESPACE}
+  name: ${GQLSWIS_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${GQLSWIS_APP_NAME}
+      namespace: ${GQLSWIS_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${GQLSWIS_NODE_GROUP}
+  replicas: ${GQLSWIS_MIN_REP}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${GQLSWIS_APP_NAME}
+        namespace: ${GQLSWIS_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${GQLSWIS_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${GQLSWIS_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${GQLSWIS_APP_NAME}
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: ${GQLSWIS_SECRET}
+          resources:
+            requests:
+              cpu: ${GQLSWIS_REQ_CPU}
+              memory: ${GQLSWIS_REQ_MEM}
+            limits:
+              cpu: ${GQLSWIS_LIM_CPU}
+              memory: ${GQLSWIS_LIM_MEM}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${GQLSWIS_VOLUME}
+      volumes:
+        - name: ${GQLSWIS_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${GQLSWIS_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${GQLSWIS_NODE_GROUP}
+
+# graphql hpa
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${GQLSWIS_DEPLOYMENT_NAME}
+  namespace: ${GQLSWIS_NAMESPACE}
+spec:
+  maxReplicas: ${GQLSWIS_MAX_REP} # maximum replicas of pods
+  minReplicas: ${GQLSWIS_MIN_REP}
+  behavior:
+    scaleDown:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 30
+        - type: Percent
+          value: 10
+          periodSeconds: 30
+      selectPolicy: Min
+      stabilizationWindowSeconds: 300
+    scaleUp:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+      selectPolicy: Max
+      stabilizationWindowSeconds: 0
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${GQLSWIS_DEPLOYMENT_NAME}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: ${GQLSWIS_TGT_CPU_PERCENT}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${GQLSWIS_NAMESPACE}
+  name: ${GQLSWIS_SERVICE_NAME}
+spec:
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+  type: NodePort
+  externalTrafficPolicy: Cluster
+  selector:
+    app.kubernetes.io/name: ${GQLSWIS_APP_NAME}
+    namespace: ${GQLSWIS_NAMESPACE}
+    alpha.eksctl.io/nodegroup-name: ${GQLSWIS_NODE_GROUP}
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: ${GQLSWIS_NAMESPACE}
+  name: ${GQLSWIS_INGRESS_NAME}
+  annotations:
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/certificate-arn: ${GQLSWIS_CERTIFICATE_ARN}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-Ext-2018-06
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/load-balancer-name: ${GQLSWIS_ALB}
+    alb.ingress.kubernetes.io/wafv2-acl-arn: ${WAF_ARN}
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    kubernetes.io/ingress.class: ${ING_CLS_NAME}
+    alb.ingress.kubernetes.io/target-node-labels: eks.amazonaws.com/nodegroup=${GQLSWIS_NODE_GROUP}
+    # alb attributes
+    # alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=ss-prd1-v2-alb-access-logs-new,access_logs.s3.prefix=graphql-alb,idle_timeout.timeout_seconds=200
+    # health-check setting
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/healthcheck-path: /test
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/success-codes: "200"
+spec:
+  rules:
+    - host: ${GQLSWIS_HOST_NAME}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ${GQLSWIS_SERVICE_NAME}
+                port:
+                  number: 80

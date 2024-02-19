@@ -1,0 +1,53 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${WORKER_RAILSAPI_NAMESPACE}
+  name: ${WORKER_DEPLOYMENT_NAME_SURVEY_RESPONSE}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${WORKER_APP_NAME_SURVEY_RESPONSE}
+  replicas: ${WORKER_SURVEY_RESPONSE_REP}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${WORKER_APP_NAME_SURVEY_RESPONSE}
+    spec:
+      containers:
+        - image: ${WORKER_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${WORKER_APP_NAME_SURVEY_RESPONSE}
+          command:
+            - ruby
+            - /var/lib/v2-api/workers/campaigns/survey_response_pull.rb
+          resources:
+            requests:
+              cpu: ${WORKER_SURVEY_RESPONSE_REQ_CPU}
+              memory: ${WORKER_SURVEY_RESPONSE_REQ_MEM}
+            limits:
+              cpu: ${WORKER_SURVEY_RESPONSE_LIM_CPU}
+              memory: ${WORKER_SURVEY_RESPONSE_LIM_MEM}
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+          volumeMounts:
+            - mountPath: /storage
+              name: ${WORKER_RAILSAPI_VOLUME}
+      volumes:
+        - name: ${WORKER_RAILSAPI_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${WORKER_RAILSAPI_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${WORKER_RAILSAPI_NODE_GROUP}

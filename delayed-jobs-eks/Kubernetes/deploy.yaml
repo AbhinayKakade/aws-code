@@ -1,0 +1,113 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_DELAYED_JOBS_NAMESPACE}
+  name: ${RAILS_DELAYED_JOBS_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_DELAYED_JOBS_APP_NAME}
+      namespace: ${RAILS_DELAYED_JOBS_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_DELAYED_JOBS_NODE_GROUP}
+  replicas: ${RAILS_DELAYED_JOBS_MIN_REP}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_DELAYED_JOBS_APP_NAME}
+        namespace: ${RAILS_DELAYED_JOBS_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_DELAYED_JOBS_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_DELAYED_JOBS_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-c"]
+          args: ["RAILS_ENV=production bin/delayed_job run"]
+          name: ${RAILS_DELAYED_JOBS_APP_NAME}
+          resources:
+            requests:
+              cpu: ${RAILS_DELAYED_JOBS_REQ_CPU}
+              memory: ${RAILS_DELAYED_JOBS_REQ_MEM}
+            limits:
+              cpu: ${RAILS_DELAYED_JOBS_LIM_CPU}
+              memory: ${RAILS_DELAYED_JOBS_LIM_MEM}
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_DELAYED_JOBS_VOLUME}
+      volumes:
+        - name: ${RAILS_DELAYED_JOBS_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_DELAYED_JOBS_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_DELAYED_JOBS_NODE_GROUP}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${RAILS_DELAYED_JOBS_NAMESPACE}
+  name: ${RAILS_DEPLOYMENT_NAME_SIDEKIQ}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${RAILS_APP_NAME_SIDEKIQ}
+      namespace: ${RAILS_DELAYED_JOBS_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${RAILS_DELAYED_JOBS_NODE_GROUP}
+  replicas: ${RAILS_SIDEKIQ_MIN_REP}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${RAILS_APP_NAME_SIDEKIQ}
+        namespace: ${RAILS_DELAYED_JOBS_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${RAILS_DELAYED_JOBS_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${RAILS_DELAYED_JOBS_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-c"]
+          args: ["bundle exec sidekiq -C config/sidekiq.yml -e production"]
+          name: ${RAILS_APP_NAME_SIDEKIQ}
+          resources:
+            requests:
+              cpu: ${RAILS_SIDEKIQ_REQ_CPU}
+              memory: ${RAILS_SIDEKIQ_REQ_MEM}
+            limits:
+              cpu: ${RAILS_SIDEKIQ_LIM_CPU}
+              memory: ${RAILS_SIDEKIQ_LIM_MEM}
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - |-
+          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
+          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
+          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
+          #   initialDelaySeconds: 300
+          #   periodSeconds: 20
+          #   failureThreshold: 2
+          #   timeoutSeconds: 2
+          volumeMounts:
+            - mountPath: /storage
+              name: ${RAILS_SIDEKIQ_VOLUME}
+      volumes:
+        - name: ${RAILS_SIDEKIQ_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${RAILS_DELAYED_JOBS_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${RAILS_DELAYED_JOBS_NODE_GROUP}

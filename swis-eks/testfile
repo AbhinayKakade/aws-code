@@ -1,0 +1,5 @@
+total 16
+drwxr-xr-x   8 anandhababu  staff   256 29 Jun 16:27 Docker
+drwxr-xr-x  12 anandhababu  staff   384 29 Jun 16:27 Kubernetes
+-rw-r--r--   1 anandhababu  staff  6879 29 Jun 16:27 swis_v2.Jenkinsfile
+-rw-r--r--   1 anandhababu  staff     0 29 Jun 16:28 testfile

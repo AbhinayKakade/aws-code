@@ -1,0 +1,40 @@
+FROM ruby:2.7.1-buster
+ARG RAILS_ENV
+ARG RAILS_MIGRATIONS
+ARG RAILS_SEED
+ARG SECRET_KEY_BASE
+
+RUN apt-get update
+RUN apt-get install imagemagick -y
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
+    && unzip awscliv2.zip \
+    && ./aws/install \
+    && rm -rf \
+    awscliv2.zip
+ENV RAILS_ENV=${RAILS_ENV}
+ENV RAILS_LOG_TO_STDOUT=true
+RUN mkdir ~/.ssh
+WORKDIR /var/lib/v2-api
+COPY ./v2-api /var/lib/v2-api
+
+RUN bundle update 
+RUN bundle install
+
+COPY ./Docker/rails-api.env /var/lib/v2-api
+COPY ./Docker/rails-api-buster.sh /var/lib/v2-api
+COPY ./Docker/rds-combined-ca-bundle.pem /var/lib/v2-api/ssl/
+COPY ./Docker/rootCA.pem /var/lib/v2-api/ssl/
+COPY ./Docker/mongodb.pem /var/lib/v2-api/ssl/
+COPY ./Docker/prd1-surveysdb-mongodb.pem /var/lib/v2-api/ssl/
+COPY ./Docker/prd1-surveysdb-rootCA.pem /var/lib/v2-api/ssl/
+COPY ./Docker/prd1-socialmonitordb-mongodb.pem /var/lib/v2-api/ssl/
+COPY ./Docker/prd1-socialmonitordb-rootCA.pem /var/lib/v2-api/ssl/
+COPY ./Docker/.aws /var/lib/v2-api/.aws
+COPY ./Docker/.aws /var/lib/v2-api/.aws/
+
+RUN chmod +x rails-api-buster.sh
+RUN bash rails-api-buster.sh
+
+EXPOSE 3000
+
+CMD ["rails", "server", "-b", "0.0.0.0", "-p", "3000"]

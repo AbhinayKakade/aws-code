@@ -1,0 +1,10 @@
+version: "3.9"
+services:
+  webapp:
+    image: "${SOCIAL_MONITOR_IMAGE}:${TAG}"
+    build:
+        context: ..
+        dockerfile: ./Docker/Dockerfile
+    ports:
+      - "8080:8080"
+    env_file: .env

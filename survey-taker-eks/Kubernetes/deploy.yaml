@@ -1,0 +1,103 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${SURVEY_TAKER_NAMESPACE}
+  name: ${SURVEY_TAKER_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${SURVEY_TAKER_APP_NAME}
+      namespace: ${SURVEY_TAKER_NAMESPACE}
+      cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
+  replicas: ${SURVEY_TAKER_MIN_REP}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${SURVEY_TAKER_APP_NAME}
+        namespace: ${SURVEY_TAKER_NAMESPACE}
+        cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${SURVEY_TAKER_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${SURVEY_TAKER_APP_NAME}
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: ${SURVEY_TAKER_SECRET}
+          resources:
+            requests:
+              cpu: ${SURVEY_TAKER_REQ_CPU}
+              memory: ${SURVEY_TAKER_REQ_MEM}
+            limits:
+              cpu: ${SURVEY_TAKER_LIM_CPU}
+              memory: ${SURVEY_TAKER_LIM_MEM}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 5
+      #     volumeMounts:
+      #       - mountPath: /storage
+      #         name: ${SURVEY_TAKER_VOLUME}
+      # volumes:
+      #   - name: ${SURVEY_TAKER_VOLUME}
+      #     persistentVolumeClaim:
+      #       claimName: ${SURVEY_TAKER_PVC}
+      nodeSelector:
+        cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${SURVEY_TAKER_NAMESPACE}
+  name: ${SURVEY_TAKER_SHORTURL_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${SURVEY_TAKER_SHORTURL_APP_NAME}
+      namespace: ${SURVEY_TAKER_NAMESPACE}
+      cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
+  replicas: ${SURVEY_TAKER_SHORTURL_MIN_REP}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${SURVEY_TAKER_SHORTURL_APP_NAME}
+        namespace: ${SURVEY_TAKER_NAMESPACE}
+        cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${SURVEY_TAKER_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${SURVEY_TAKER_SHORTURL_APP_NAME}
+          ports:
+            - containerPort: 9000
+          envFrom:
+            - secretRef:
+                name: ${SURVEY_TAKER_SECRET}
+          resources:
+            requests:
+              cpu: ${SURVEY_TAKER_SHORTURL_REQ_CPU}
+              memory: ${SURVEY_TAKER_SHORTURL_REQ_MEM}
+            limits:
+              cpu: ${SURVEY_TAKER_SHORTURL_LIM_CPU}
+              memory: ${SURVEY_TAKER_SHORTURL_LIM_MEM}
+      #     volumeMounts:
+      #       - mountPath: /storage
+      #         name: ${SURVEY_TAKER_SHORTURL_VOLUME}
+      # volumes:
+      #   - name: ${SURVEY_TAKER_SHORTURL_VOLUME}
+      #     persistentVolumeClaim:
+      #       claimName: ${SURVEY_TAKER_PVC}
+      nodeSelector:
+        cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}

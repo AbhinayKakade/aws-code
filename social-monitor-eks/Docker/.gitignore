@@ -1,0 +1,3 @@
+# Ignore  in this directory
+.env
+social-monitor.env

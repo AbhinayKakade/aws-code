@@ -1,0 +1,20 @@
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: ${INGESTION_MIDDLEWARE_NAME}
+  namespace: ${INGESTION_NAMESPACE}
+spec:
+  headers:
+    customResponseHeaders:
+      X-XSS-Protection: "1; mode=block"
+      Referrer-Policy: "strict-origin-when-cross-origin"
+      Permissions-Policy: "geolocation=(self), camera=(self), microphone=(self), autoplay=(self)"
+      X-Content-Type-Options: "nosniff"
+      X-Frame-Options: "sameorigin"
+      X-Permitted-Cross-Domain-Policies: "none"
+      Strict-Transport-Security: "max-age=31536000; includeSubdomains"
+      Cross-Origin-Embedder-Policy: "unsafe-none"
+      Cross-Origin-Opener-Policy: "unsafe-none"
+      Cross-Origin-Resource-Policy: "same-origin"
+      Cache-Control: "no-cache, no-store, must-revalidate"

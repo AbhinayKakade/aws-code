@@ -1,0 +1,17 @@
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ${SOCIAL_MONITOR_INGRESSROUTE_NAME}
+  namespace: ${SOCIAL_MONITOR_NAMESPACE}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`${SOCIAL_MONITOR_HOST_NAME}`)
+      kind: Rule
+      middlewares:
+        - name: ${SOCIAL_MONITOR_MIDDLEWARE_NAME}
+      services:
+        - name: ${SOCIAL_MONITOR_SERVICE_NAME}
+          port: 80

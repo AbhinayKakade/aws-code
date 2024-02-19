@@ -1,0 +1,56 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${SOCIAL_MONITOR_NAMESPACE}
+  name: ${SOCIAL_MONITOR_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${SOCIAL_MONITOR_APP_NAME}
+      namespace: ${SOCIAL_MONITOR_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${SOCIAL_MONITOR_NODE_GROUP}
+  replicas: ${SOCIAL_MONITOR_MIN_REP}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${SOCIAL_MONITOR_APP_NAME}
+        namespace: ${SOCIAL_MONITOR_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${SOCIAL_MONITOR_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${SOCIAL_MONITOR_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${SOCIAL_MONITOR_APP_NAME}
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: ${SOCIAL_MONITOR_SECRET}
+          resources:
+            requests:
+              cpu: ${SOCIAL_MONITOR_REQ_CPU}
+              memory: ${SOCIAL_MONITOR_REQ_MEM}
+            limits:
+              cpu: ${SOCIAL_MONITOR_LIM_CPU}
+              memory: ${SOCIAL_MONITOR_LIM_MEM}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 5
+          volumeMounts:
+            - mountPath: /storage
+              name: ${SOCIAL_MONITOR_VOLUME}
+      volumes:
+        - name: ${SOCIAL_MONITOR_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${SOCIAL_MONITOR_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${SOCIAL_MONITOR_NODE_GROUP}

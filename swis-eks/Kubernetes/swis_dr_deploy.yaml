@@ -1,0 +1,282 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${SWIS_NAMESPACE}
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ${SWIS_PV}
+spec:
+  capacity:
+    storage: ${SWIS_PV_SIZE}
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: efs-sc
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: ${EFS_ID}
+    volumeAttributes:
+      encryptInTransit: "true"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${SWIS_PVC}
+  namespace: ${SWIS_NAMESPACE}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  volumeName: ${SWIS_PV}
+  selector:
+    matchLabels:
+      name: ${SWIS_PV}
+  resources:
+    requests:
+      storage: ${SWIS_PV_SIZE}
+
+# for swis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${SWIS_NAMESPACE}
+  name: ${SWIS_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${SWIS_APP_NAME}
+      namespace: ${SWIS_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${SWIS_NODE_GROUP}
+  replicas: ${SWIS_MIN_REP}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${SWIS_APP_NAME}
+        namespace: ${SWIS_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${SWIS_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${SWIS_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${SWIS_APP_NAME}
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: ${SWIS_SECRET}
+          resources:
+            requests:
+              cpu: ${SWIS_REQ_CPU}
+              memory: ${SWIS_REQ_MEM}
+            limits:
+              cpu: ${SWIS_LIM_CPU}
+              memory: ${SWIS_LIM_MEM}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${SWIS_VOLUME}
+      volumes:
+        - name: ${SWIS_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${SWIS_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${SWIS_NODE_GROUP}
+
+# For swis-facebook
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   namespace: ${SWIS_NAMESPACE}
+#   name: ${SWIS_DEPLOYMENT_NAME_FB}
+# spec:
+#   selector:
+#     matchLabels:
+#       app.kubernetes.io/name: ${SWIS_APP_NAME_FB}
+#       namespace: ${SWIS_NAMESPACE}
+#       alpha.eksctl.io/nodegroup-name: ${SWIS_NODE_GROUP}
+#   replicas: ${SWIS_MIN_REP_FB}
+#   revisionHistoryLimit: 4
+#   template:
+#     metadata:
+#       labels:
+#         app.kubernetes.io/name: ${SWIS_APP_NAME_FB}
+#         namespace: ${SWIS_NAMESPACE}
+#         alpha.eksctl.io/nodegroup-name: ${SWIS_NODE_GROUP}
+#     spec:
+#       containers:
+#         - image: ${SWIS_REPOSITORY}:${TAG}
+#           imagePullPolicy: Always
+#           name: ${SWIS_APP_NAME_FB}
+#           ports:
+#             - containerPort: 3000
+#           envFrom:
+#             - secretRef:
+#                 name: ${SWIS_SECRET}
+#           resources:
+#             requests:
+#               cpu: ${SWIS_REQ_CPU_FB}
+#               memory: ${SWIS_REQ_MEM_FB}
+#             limits:
+#               cpu: ${SWIS_LIM_CPU_FB}
+#               memory: ${SWIS_LIM_MEM_FB}
+#           volumeMounts:
+#             - mountPath: /storage
+#               name: ${SWIS_VOLUME}
+#       volumes:
+#         - name: ${SWIS_VOLUME}
+#           persistentVolumeClaim:
+#             claimName: ${SWIS_PVC}
+#       nodeSelector:
+#         "eks.amazonaws.com/nodegroup": ${SWIS_NODE_GROUP}
+
+# m2-swis hpa
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${SWIS_DEPLOYMENT_NAME}
+  namespace: ${SWIS_NAMESPACE}
+spec:
+  maxReplicas: ${SWIS_MAX_REP} # maximum replicas of pods
+  minReplicas: ${SWIS_MIN_REP}
+  behavior:
+    scaleDown:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 30
+        - type: Percent
+          value: 10
+          periodSeconds: 30
+      selectPolicy: Min
+      stabilizationWindowSeconds: 300
+    scaleUp:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+      selectPolicy: Max
+      stabilizationWindowSeconds: 0
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${SWIS_DEPLOYMENT_NAME}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: ${SWIS_TGT_CPU_PERCENT}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+# for swis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${SWIS_NAMESPACE}
+  name: ${SWIS_SERVICE_NAME}
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  externalTrafficPolicy: Cluster
+  selector:
+    app.kubernetes.io/name: ${SWIS_APP_NAME}
+    namespace: ${SWIS_NAMESPACE}
+    alpha.eksctl.io/nodegroup-name: ${SWIS_NODE_GROUP}
+
+# for swis-facebook
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   namespace: ${SWIS_NAMESPACE}
+#   name: ${SWIS_SERVICE_NAME_FB}
+# spec:
+#   ports:
+#     - port: 80
+#       targetPort: 80
+#       protocol: TCP
+#   type: NodePort
+#   externalTrafficPolicy: Cluster
+#   selector:
+#     app.kubernetes.io/name: ${SWIS_APP_NAME_FB}
+#     namespace: ${SWIS_NAMESPACE}
+#     alpha.eksctl.io/nodegroup-name: ${SWIS_NODE_GROUP}
+
+# swis ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: ${SWIS_NAMESPACE}
+  name: ${SWIS_INGRESS_NAME}
+  annotations:
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/certificate-arn: ${SWIS_CERTIFICATE_ARN}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-Ext-2018-06
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/load-balancer-name: ${SWIS_ALB}
+    # alb.ingress.kubernetes.io/wafv2-acl-arn: ${WAF_ARN}
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    kubernetes.io/ingress.class: ${ING_CLS_NAME}
+    alb.ingress.kubernetes.io/target-node-labels: eks.amazonaws.com/nodegroup=${SWIS_NODE_GROUP}
+    # alb attributes
+    # alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=ss-prd1-v2-alb-access-logs-new,access_logs.s3.prefix=swis-alb,idle_timeout.timeout_seconds=200
+    # health-check setting
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/healthcheck-path: /sitemaphc.html
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/success-codes: "200"
+    # alb.ingress.kubernetes.io/actions.crawler: >
+    #   {"type":"forward","forwardConfig":{"targetGroups":[{"serviceName":"${SWIS_SERVICE_NAME_FB}","servicePort":"80"}]}}
+    # alb.ingress.kubernetes.io/conditions.crawler: >
+    #   [{"field":"http-header","httpHeaderConfig":{"httpHeaderName": "User-Agent", "values":["facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"]}}]
+
+spec:
+  rules:
+    # - host: ${SWIS_HOST_NAME}
+    #   http:
+    #     paths:
+    #       - path: /
+    #         pathType: Prefix
+    #         backend:
+    #           service:
+    #             name: crawler
+    #             port:
+    #               name: use-annotation
+    - host: ${SWIS_HOST_NAME}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ${SWIS_SERVICE_NAME}
+                port:
+                  number: 80

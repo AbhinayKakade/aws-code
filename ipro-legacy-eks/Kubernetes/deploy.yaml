@@ -1,0 +1,46 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${IPRO_LEGACY_NAMESPACE}
+  name: ${IPRO_LEGACY_DEPLOYMENT_NAME}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${IPRO_LEGACY_APP_NAME}
+      namespace: ${IPRO_LEGACY_NAMESPACE}
+      alpha.eksctl.io/nodegroup-name: ${IPRO_LEGACY_NODE_GROUP}
+  replicas: ${IPRO_LEGACY_MIN_REP}
+  revisionHistoryLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${IPRO_LEGACY_APP_NAME}
+        namespace: ${IPRO_LEGACY_NAMESPACE}
+        alpha.eksctl.io/nodegroup-name: ${IPRO_LEGACY_NODE_GROUP}
+    spec:
+      containers:
+        - image: ${IPRO_LEGACY_REPOSITORY}:${TAG}
+          imagePullPolicy: Always
+          name: ${IPRO_LEGACY_APP_NAME}
+          ports:
+            - containerPort: 8060
+          envFrom:
+            - secretRef:
+                name: ${IPRO_LEGACY_SECRET}
+          resources:
+            requests:
+              cpu: ${IPRO_LEGACY_REQ_CPU}
+              memory: ${IPRO_LEGACY_REQ_MEM}
+            limits:
+              cpu: ${IPRO_LEGACY_LIM_CPU}
+              memory: ${IPRO_LEGACY_LIM_MEM}
+          volumeMounts:
+            - mountPath: /storage
+              name: ${IPRO_LEGACY_VOLUME}
+      volumes:
+        - name: ${IPRO_LEGACY_VOLUME}
+          persistentVolumeClaim:
+            claimName: ${IPRO_LEGACY_PVC}
+      nodeSelector:
+        "eks.amazonaws.com/nodegroup": ${IPRO_LEGACY_NODE_GROUP}
