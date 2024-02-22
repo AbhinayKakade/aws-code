@@ -1,0 +1,73 @@
+export V2_SURVEY_TAKER_MONGODB_CONNECTION_URI=mongodb://ss_prd1_v2_surveys_user:TLhcCeoJMwmv3F6i@192.168.5.112:27017/ss_prd1_v2_surveys_db?authSource=admin&tls=true
+export V2_SURVEY_CLIENT_API_URL=https://surveys.experience.com
+export V2_SURVEY_TAKER_IMAGE_API_URL=https://api.experience.com/
+export V2_SURVEY_TAKER_ANSWER_CLOUDFRONT_URL=https://d2u1dik1gxemp0.cloudfront.net
+export V2_SURVEY_TAKER_ANSWER_S3_ACCESS_KEY_ID=AKIAVUIIVZ2PQTPS4N72
+export V2_SURVEY_TAKER_ANSWER_S3_SECRET_ACCESS_KEY=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
+export V2_SURVEY_TAKER_ANSWER_S3_BUCKET_NAME=ss-prd1-v2-survey-taker-bucket
+export TLS_CA_FILE_PATH=/var/lib/survey-client/ssl/rootCA.pem
+export TLS_CERT_KEY_FILE_PATH=/var/lib/survey-client/ssl/mongodb.pem
+export V2_PRL_API_URL=https://api.experience.com/
+export IV=edvBAhbvWcpceIbU
+export KEY=D5ErNzPkVBUTWehzyXtLpSXSG
+export V2_FB_CLIENT_ID=866992583360371
+export V2_SURVEY_TAKER_CLOUDFRONT_URL=https://d2u1dik1gxemp0.cloudfront.net/
+export NEW_RELIC_APP_NAME=V2_PROD_SURVEY_TAKER
+export NEW_RELIC_LICENSE_KEY=0fa11a64a7e101d0b8624bd3cdc0a2b8a5e7513d
+export V2_CAMPAIGNS_API_URL=https://api.experience.com/
+export V2_PRL_APP_ID=2ae0c6013f735ea525dde0f67ffb0aee
+export V2_PRL_APP_SECRET=14378c20483d0a565094deb0394ac8029b6084745ee9a34957b8ffc1bdd1a9c2
+export SHORT_URL_GENERATOR_ACCESS_TOKEN=SFGljkhkhJHIKahshwydskwd
+export SHORT_URL_GENERATOR_URL=https://p.xprn.co
+export SHORT_URL_APP_PORT=9000
+# export V2_SURVEY_TAKER_ANSWER_S3_ACCESS_KEY_ID=AKIAVUIIVZ2PQTPS4N72
+# export V2_SURVEY_TAKER_ANSWER_S3_SECRET_ACCESS_KEY=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
+# export V2_SURVEY_TAKER_ANSWER_S3_BUCKET_NAME=ss-prd1-v2-survey-taker-bucket
+
+# twitter
+# modified on 09-may-2023
+#export V2_ST_TWITTER_API_KEY=064RFEUGaVxMwQoQST5jsUsGe
+#export V2_ST_TWITTER_SECRET=DTM5R8Q9MXAKMuNKYEOQibXW1bNLSL69nQgcbKtZiC841E9qWR
+export V2_ST_TWITTER_API_KEY=aS1pOE4yNl9YNUVPVGl3aEEwV3o6MTpjaQ
+export V2_ST_TWITTER_SECRET=Txgqm6bJ0cww5ULVPQ8Bb2PtZkdxoG8MPypX9Uh2zV6lsq78K6
+export V2_ST_TWITTER_REDIRECT_URL=https://surveys.experience.com/api/twitter_profile_pic
+export V2_ST_TWITTER_TOKEN=AAAAAAAAAAAAAAAAAAAAAOb2YAEAAAAAVNE92Xbuu7O8rssv2UM499NPvZs%3DSzJrtzpFpaU4IW94XLdUb4hRXd1IM2iD2mvp0o9vDkzm7f0p1X
+
+# facebook
+export V2_ST_FB_APP_ID=866992583360371
+export V2_ST_FB_REDIRECT_URL=https://surveys.experience.com/fb
+export V2_ST_FB_SECRET=fcc9f6f47e762e078a5c75880d3fa1c6
+
+# google - commenting out . This is created for eks
+# export V2_ST_GG_APP_ID=525556078364-ddtlm8ff5uli6rfu99jrl2m0rb1rv86u.apps.googleusercontent.com
+# export V2_ST_GG_SECRET=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
+# export V2_ST_GG_REDIRECT_URL=https://surveys.experience.com/api/google_profile_pic
+
+# linkedin
+export V2_ST_LI_APP_ID=81fnrs96g11sgw
+export V2_ST_LI_SECRET=rFxzUDFhP9ZzCU0H
+export V2_ST_LI_REDIRECT_URL=https://surveys.experience.com/api/linkedin_profile_pic
+export V2_SURVEY_TAKER_WEB_EQUAL_SITE_KEY=71877f2cd7fddadbd475bc63e07ddb93
+
+# google entries in prod - current
+export V2_ST_GG_APP_ID=525556078364-htrh9c5e7queonfmh4jjhatob8sul6io.apps.googleusercontent.com
+export V2_ST_GG_SECRET=E1EPYZahLViK58oaSIfTeBhY
+export V2_ST_GG_REDIRECT_URL=https://surveys.experience.com/api/google_profile_pic
+
+export SWIS_BASE_URL=https://pro.experience.com/reviews
+export MYSQL_DB_HOST=ss-prd1-v2-app-mysql.cu9uexl7xet5.us-east-1.rds.amazonaws.com
+export MYSQL_DB_USER=message_queue
+export MYSQL_DB_PASSWORD=L6ePyrj9X8k87Kr
+export MYSQL_DB_NAME=ss_v2_db
+
+##Added on 31_Oct_2023
+export NODE_OPTIONS=--openssl-legacy-provider
+
+#added on 28-nov-2023
+export LISTING_ACCESS_KEY_ID=AKIAVUIIVZ2PVKNX6FFU
+export LISTING_SECRET_ACCESS_KEY=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
+export AWS_REGION=us-east-1
+export LISTING_S3_QUEUE_BUCKET_NAME=ss-prd1-v2-listings-bucket
+export QUEUE_URL=https://sqs.us-east-1.amazonaws.com/387102133919/ss-prd1-v2-image-handler
+export TO_MAIL=prod-monitoring-alerts@experience.com,nagalakshmi@experience.com
+jenkins@ip-192-168-5-153:~/Docker-Kubernetes/survey-taker$
