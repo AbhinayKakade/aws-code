@@ -10,7 +10,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_API_APP_NAME_UBUNTU}
       namespace: ${RAILS_API_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
   replicas: ${RAILS_API_MIN_REP_UBUNTU}
   revisionHistoryLimit: 4
   template:
@@ -18,10 +18,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_API_APP_NAME_UBUNTU}
         namespace: ${RAILS_API_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_API_REPOSITORY_UBUNTU}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-api-ubuntu:latest"
           imagePullPolicy: Always
           name: ${RAILS_API_APP_NAME_UBUNTU}
           ports:
@@ -46,22 +46,10 @@ spec:
             periodSeconds: 10
             successThreshold: 1
             timeoutSeconds: 20
-          # livenessProbe:
-          #   exec:
-          #     command:
-          #       - /bin/bash
-          #       - -c
-          #       - |-
-          #         used=$(awk '{ print int($1/1.049e+6) }' /sys/fs/cgroup/memory/memory.usage_in_bytes);
-          #         thresh=$(awk '{ print int( $1 / 1.049e+6 * 0.95 ) }' /sys/fs/cgroup/memory/memory.limit_in_bytes);
-          #         if [[ ${used} -gt ${thresh} ]]; then exit 1; fi
-          #   initialDelaySeconds: 300
-          #   periodSeconds: 20
-          #   failureThreshold: 2
-          #   timeoutSeconds: 2
+
       volumes:
         - name: ${RAILS_API_VOLUME}
           persistentVolumeClaim:
             claimName: ${RAILS_API_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_API_NODE_GROUP}

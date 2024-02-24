@@ -51,7 +51,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${SWIS_APP_NAME}
       namespace: ${SWIS_NAMESPACE}
-      cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}
+      cloud.google.com/gke-nodepool: swis-ng
   replicas: ${SWIS_MIN_REP}
   revisionHistoryLimit: 4
   template:
@@ -59,7 +59,7 @@ spec:
       labels:
         app.kubernetes.io/name: ${SWIS_APP_NAME}
         namespace: ${SWIS_NAMESPACE}
-        cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}
+        cloud.google.com/gke-nodepool: swis-ng
     spec:
       containers:
         - image: us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/swis:latest
@@ -85,7 +85,7 @@ spec:
       #     persistentVolumeClaim:
       #       claimName: ${SWIS_PVC}
       nodeSelector:
-        cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}
+        cloud.google.com/gke-nodepool: swis-ng # ${SWIS_NODE_GROUP} 
 
 # For swis-facebook
 ---
@@ -99,7 +99,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${SWIS_APP_NAME_FB}
       namespace: ${SWIS_NAMESPACE}
-      cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}
+      cloud.google.com/gke-nodepool: swis-ng
   replicas: ${SWIS_MIN_REP_FB}
   revisionHistoryLimit: 4
   template:
@@ -107,7 +107,7 @@ spec:
       labels:
         app.kubernetes.io/name: ${SWIS_APP_NAME_FB}
         namespace: ${SWIS_NAMESPACE}
-        cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}
+        cloud.google.com/gke-nodepool: swis-ng
     spec:
       containers:
         - image: us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/swis:latest
@@ -133,7 +133,7 @@ spec:
       #     persistentVolumeClaim:
       #       claimName: ${SWIS_PVC}
       nodeSelector:
-        cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}
+        cloud.google.com/gke-nodepool: swis-ng
 
 # m2-swis hpa
 ---
@@ -201,7 +201,7 @@ spec:
   selector:
     app.kubernetes.io/name: ${SWIS_APP_NAME}
     namespace: ${SWIS_NAMESPACE}
-    cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}
+    cloud.google.com/gke-nodepool: swis-ng
 
 # for swis-facebook
 ---
@@ -220,7 +220,7 @@ spec:
   selector:
     app.kubernetes.io/name: ${SWIS_APP_NAME_FB}
     namespace: ${SWIS_NAMESPACE}
-    cloud.google.com/gke-nodepool: swis-ng #${SWIS_NODE_GROUP}
+    cloud.google.com/gke-nodepool: swis-ng
 
 # Gateway for Swiss
 ---

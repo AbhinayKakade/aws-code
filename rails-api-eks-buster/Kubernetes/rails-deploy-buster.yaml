@@ -16,9 +16,11 @@ spec:
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: efs-sc
+  # storageClassName: efs-sc
+  storageClassName: "standard-rwx"
   csi:
-    driver: efs.csi.aws.com
+    driver: filestore.csi.storage.gke.io
+    # driver: efs.csi.aws.com
     volumeHandle: ${EFS_ID}:/:${EFS_AP}
     volumeAttributes:
       encryptInTransit: "true"
@@ -32,7 +34,8 @@ metadata:
 spec:
   accessModes:
     - ReadWriteMany
-  storageClassName: efs-sc
+  # storageClassName: efs-sc
+  storageClassName: "standard-rwx"
   volumeName: ${RAILS_API_PV}
   selector:
     matchLabels:
@@ -54,7 +57,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_API_APP_NAME}
       namespace: ${RAILS_API_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
   replicas: ${RAILS_API_MIN_REP_MAIN}
   revisionHistoryLimit: 4
   template:
@@ -62,10 +65,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_API_APP_NAME}
         namespace: ${RAILS_API_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_API_REPOSITORY}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-api-ubuntu:latest"
           imagePullPolicy: Always
           name: ${RAILS_API_APP_NAME}
           ports:
@@ -108,7 +111,7 @@ spec:
           persistentVolumeClaim:
             claimName: ${RAILS_API_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_API_NODE_GROUP}
 
 # /v2/core/cable
 ---
@@ -122,7 +125,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_API_APP_NAME_CABLE}
       namespace: ${RAILS_API_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
   replicas: ${RAILS_API_MIN_REP_CABLE}
   revisionHistoryLimit: 4
   template:
@@ -130,10 +133,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_API_APP_NAME_CABLE}
         namespace: ${RAILS_API_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_API_REPOSITORY}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-api-ubuntu:latest"
           imagePullPolicy: Always
           name: ${RAILS_API_APP_NAME_CABLE}
           ports:
@@ -176,7 +179,7 @@ spec:
           persistentVolumeClaim:
             claimName: ${RAILS_API_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_API_NODE_GROUP}
 
 # /v2/core
 
@@ -191,7 +194,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_API_APP_NAME_CORE}
       namespace: ${RAILS_API_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
   replicas: ${RAILS_API_MIN_REP_CORE}
   revisionHistoryLimit: 4
   template:
@@ -199,10 +202,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_API_APP_NAME_CORE}
         namespace: ${RAILS_API_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_API_REPOSITORY}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-api-ubuntu:latest"
           imagePullPolicy: Always
           name: ${RAILS_API_APP_NAME_CORE}
           ports:
@@ -245,7 +248,7 @@ spec:
           persistentVolumeClaim:
             claimName: ${RAILS_API_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_API_NODE_GROUP}
 
 # /v2/admin
 ---
@@ -259,7 +262,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_API_APP_NAME_ADMIN}
       namespace: ${RAILS_API_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
   replicas: ${RAILS_API_MIN_REP_ADMIN}
   revisionHistoryLimit: 4
   template:
@@ -267,10 +270,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_API_APP_NAME_ADMIN}
         namespace: ${RAILS_API_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_API_REPOSITORY}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-api-ubuntu:latest"
           imagePullPolicy: Always
           name: ${RAILS_API_APP_NAME_ADMIN}
           ports:
@@ -313,7 +316,7 @@ spec:
           persistentVolumeClaim:
             claimName: ${RAILS_API_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_API_NODE_GROUP}
 
 # /v2/campaign
 ---
@@ -327,7 +330,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_API_APP_NAME_CAMPAIGN}
       namespace: ${RAILS_API_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
   replicas: ${RAILS_API_MIN_REP_CAMPAIGN}
   revisionHistoryLimit: 4
   template:
@@ -335,10 +338,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_API_APP_NAME_CAMPAIGN}
         namespace: ${RAILS_API_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_API_REPOSITORY}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-api-ubuntu:latest"
           imagePullPolicy: Always
           name: ${RAILS_API_APP_NAME_CAMPAIGN}
           ports:
@@ -381,7 +384,7 @@ spec:
           persistentVolumeClaim:
             claimName: ${RAILS_API_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_API_NODE_GROUP}
 
 # /v2/public
 ---
@@ -395,7 +398,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_API_APP_NAME_PUBLIC}
       namespace: ${RAILS_API_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
   replicas: ${RAILS_API_MIN_REP_PUBLIC}
   revisionHistoryLimit: 4
   template:
@@ -403,10 +406,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_API_APP_NAME_PUBLIC}
         namespace: ${RAILS_API_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_API_REPOSITORY}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-api-ubuntu:latest"
           imagePullPolicy: Always
           name: ${RAILS_API_APP_NAME_PUBLIC}
           ports:
@@ -449,7 +452,7 @@ spec:
           persistentVolumeClaim:
             claimName: ${RAILS_API_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_API_NODE_GROUP}
 
 # /v2/ipro
 ---
@@ -463,7 +466,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_API_APP_NAME_IPRO}
       namespace: ${RAILS_API_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
   replicas: ${RAILS_API_MIN_REP_IPRO}
   revisionHistoryLimit: 4
   template:
@@ -471,10 +474,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_API_APP_NAME_IPRO}
         namespace: ${RAILS_API_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_API_REPOSITORY}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-api-ubuntu:latest"
           imagePullPolicy: Always
           name: ${RAILS_API_APP_NAME_IPRO}
           ports:
@@ -517,7 +520,7 @@ spec:
           persistentVolumeClaim:
             claimName: ${RAILS_API_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_API_NODE_GROUP}
 
 # Hpa Main
 ---
@@ -878,7 +881,7 @@ spec:
   selector:
     app.kubernetes.io/name: ${RAILS_API_APP_NAME}
     namespace: ${RAILS_API_NAMESPACE}
-    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
 
 # service only
 # /v2/core/cable
@@ -897,7 +900,7 @@ spec:
   selector:
     app.kubernetes.io/name: ${RAILS_API_APP_NAME_CABLE}
     namespace: ${RAILS_API_NAMESPACE}
-    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
 
 # /v2/core
 ---
@@ -915,7 +918,7 @@ spec:
   selector:
     app.kubernetes.io/name: ${RAILS_API_APP_NAME_CORE}
     namespace: ${RAILS_API_NAMESPACE}
-    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
 
 # /v2/core - 2
 ---
@@ -933,7 +936,7 @@ spec:
   selector:
     app.kubernetes.io/name: ${RAILS_API_APP_NAME_CORE}
     namespace: ${RAILS_API_NAMESPACE}
-    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
 
 # /v2/admin
 ---
@@ -951,7 +954,7 @@ spec:
   selector:
     app.kubernetes.io/name: ${RAILS_API_APP_NAME_ADMIN}
     namespace: ${RAILS_API_NAMESPACE}
-    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
 
 # /v2/campaign
 ---
@@ -969,7 +972,7 @@ spec:
   selector:
     app.kubernetes.io/name: ${RAILS_API_APP_NAME_CAMPAIGN}
     namespace: ${RAILS_API_NAMESPACE}
-    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
 
 # /v2/campaign - 2
 ---
@@ -987,7 +990,7 @@ spec:
   selector:
     app.kubernetes.io/name: ${RAILS_API_APP_NAME_CAMPAIGN}
     namespace: ${RAILS_API_NAMESPACE}
-    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
 
 # /v2/public
 ---
@@ -1005,7 +1008,7 @@ spec:
   selector:
     app.kubernetes.io/name: ${RAILS_API_APP_NAME_PUBLIC}
     namespace: ${RAILS_API_NAMESPACE}
-    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
 
 # /v2/ipro
 ---
@@ -1023,7 +1026,18 @@ spec:
   selector:
     app.kubernetes.io/name: ${RAILS_API_APP_NAME_IPRO}
     namespace: ${RAILS_API_NAMESPACE}
-    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
+
+# Google Managed SSL Certificate.
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: rails-api-managed-certificate
+  namespace: ${RAILS_API_NAMESPACE}
+spec:
+  domains:
+    - api.experience.com
 
 #Ingress 1
 
@@ -1034,26 +1048,29 @@ metadata:
   name: ${RAILS_API_INGRESS_NAME_ONE}
   namespace: ${RAILS_API_NAMESPACE}
   annotations:
-    alb.ingress.kubernetes.io/target-type: instance
-    alb.ingress.kubernetes.io/certificate-arn: ${RAILS_API_CERTIFICATE_ARN_NEW}
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/load-balancer-name: ${RAILS_API_ALB_ONE}
-    alb.ingress.kubernetes.io/ssl-policy: "ELBSecurityPolicy-TLS13-1-2-2021-06"
-    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=ss-prd1-v2-alb-access-logs-new,access_logs.s3.prefix=exp-prod-rails-api-alb-buster1,idle_timeout.timeout_seconds=300
-    # alb.ingress.kubernetes.io/wafv2-acl-arn: ${WAF_ARN}
-    alb.ingress.kubernetes.io/ssl-redirect: "443"
-    alb.ingress.kubernetes.io/target-node-labels: eks.amazonaws.com/nodegroup=${RAILS_API_NODE_GROUP}
-    kubernetes.io/ingress.class: alb
-    # health-check setting
-    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
-    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
-    alb.ingress.kubernetes.io/healthcheck-path: /healthcheck
-    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
-    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "10"
-    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
-    alb.ingress.kubernetes.io/unhealthy-threshold-count: "2"
-    alb.ingress.kubernetes.io/success-codes: "200"
+    kubernetes.io/ingress.allow-http: "false"
+    networking.gke.io/managed-certificates: rails-api-managed-certificate
+    kubernetes.io/ingress.global-static-ip-name: exp-prod-rails-api
+    # alb.ingress.kubernetes.io/target-type: instance
+    # alb.ingress.kubernetes.io/certificate-arn: ${RAILS_API_CERTIFICATE_ARN_NEW}
+    # alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    # alb.ingress.kubernetes.io/scheme: internet-facing
+    # alb.ingress.kubernetes.io/load-balancer-name: ${RAILS_API_ALB_ONE}
+    # alb.ingress.kubernetes.io/ssl-policy: "ELBSecurityPolicy-TLS13-1-2-2021-06"
+    # alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=ss-prd1-v2-alb-access-logs-new,access_logs.s3.prefix=exp-prod-rails-api-alb-buster1,idle_timeout.timeout_seconds=300
+    # # alb.ingress.kubernetes.io/wafv2-acl-arn: ${WAF_ARN}
+    # alb.ingress.kubernetes.io/ssl-redirect: "443"
+    # alb.ingress.kubernetes.io/target-node-labels: eks.amazonaws.com/nodegroup=${RAILS_API_NODE_GROUP}
+    # kubernetes.io/ingress.class: alb
+    # # health-check setting
+    # alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    # alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    # alb.ingress.kubernetes.io/healthcheck-path: /healthcheck
+    # alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    # alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "10"
+    # alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    # alb.ingress.kubernetes.io/unhealthy-threshold-count: "2"
+    # alb.ingress.kubernetes.io/success-codes: "200"
 spec:
   # ingressClassName: alb
   rules:
@@ -1147,26 +1164,29 @@ metadata:
   name: ${RAILS_API_INGRESS_NAME_TWO}
   namespace: ${RAILS_API_NAMESPACE}
   annotations:
-    alb.ingress.kubernetes.io/target-type: instance
-    alb.ingress.kubernetes.io/certificate-arn: ${RAILS_API_CERTIFICATE_ARN_NEW}
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/load-balancer-name: ${RAILS_API_ALB_TWO}
-    alb.ingress.kubernetes.io/ssl-policy: "ELBSecurityPolicy-TLS13-1-2-2021-06"
-    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=ss-prd1-v2-alb-access-logs-new,access_logs.s3.prefix=exp-prod-rails-api-alb-buster2,idle_timeout.timeout_seconds=300
-    # alb.ingress.kubernetes.io/wafv2-acl-arn: ${WAF_ARN}
-    alb.ingress.kubernetes.io/ssl-redirect: "443"
-    alb.ingress.kubernetes.io/target-node-labels: eks.amazonaws.com/nodegroup=${RAILS_API_NODE_GROUP}
-    kubernetes.io/ingress.class: alb
-    # health-check setting
-    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
-    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
-    alb.ingress.kubernetes.io/healthcheck-path: /healthcheck
-    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
-    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "10"
-    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
-    alb.ingress.kubernetes.io/unhealthy-threshold-count: "2"
-    alb.ingress.kubernetes.io/success-codes: "200"
+    kubernetes.io/ingress.allow-http: "false"
+    networking.gke.io/managed-certificates: rails-api-managed-certificate
+    kubernetes.io/ingress.global-static-ip-name: exp-prod-rails-api
+    # alb.ingress.kubernetes.io/target-type: instance
+    # alb.ingress.kubernetes.io/certificate-arn: ${RAILS_API_CERTIFICATE_ARN_NEW}
+    # alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    # alb.ingress.kubernetes.io/scheme: internet-facing
+    # alb.ingress.kubernetes.io/load-balancer-name: ${RAILS_API_ALB_TWO}
+    # alb.ingress.kubernetes.io/ssl-policy: "ELBSecurityPolicy-TLS13-1-2-2021-06"
+    # alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=ss-prd1-v2-alb-access-logs-new,access_logs.s3.prefix=exp-prod-rails-api-alb-buster2,idle_timeout.timeout_seconds=300
+    # # alb.ingress.kubernetes.io/wafv2-acl-arn: ${WAF_ARN}
+    # alb.ingress.kubernetes.io/ssl-redirect: "443"
+    # alb.ingress.kubernetes.io/target-node-labels: eks.amazonaws.com/nodegroup=${RAILS_API_NODE_GROUP}
+    # kubernetes.io/ingress.class: alb
+    # # health-check setting
+    # alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    # alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    # alb.ingress.kubernetes.io/healthcheck-path: /healthcheck
+    # alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    # alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "10"
+    # alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    # alb.ingress.kubernetes.io/unhealthy-threshold-count: "2"
+    # alb.ingress.kubernetes.io/success-codes: "200"
 spec:
   # ingressClassName: alb
   rules:

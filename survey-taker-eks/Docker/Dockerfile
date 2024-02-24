@@ -1,4 +1,4 @@
-FROM 387102133919.dkr.ecr.us-east-1.amazonaws.com/node-18.17.1-alpine3.18:latest
+FROM us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/node-18.17.1-alpine3.18:latest
 WORKDIR /var/lib/survey-client
 
 COPY . /var/lib/survey-client

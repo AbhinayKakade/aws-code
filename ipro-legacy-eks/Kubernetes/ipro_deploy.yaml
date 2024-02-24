@@ -4,42 +4,42 @@ kind: Namespace
 metadata:
   name: ${IPRO_LEGACY_NAMESPACE}
 
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: ${IPRO_LEGACY_PV}
-spec:
-  capacity:
-    storage: ${IPRO_LEGACY_PV_SIZE}
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: efs-sc
-  csi:
-    driver: efs.csi.aws.com
-    volumeHandle: ${EFS_ID}:/:${EFS_AP}
-    volumeAttributes:
-      encryptInTransit: "true"
+# ---
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: ${IPRO_LEGACY_PV}
+# spec:
+#   capacity:
+#     storage: ${IPRO_LEGACY_PV_SIZE}
+#   volumeMode: Filesystem
+#   accessModes:
+#     - ReadWriteMany
+#   persistentVolumeReclaimPolicy: Retain
+#   storageClassName: efs-sc
+#   csi:
+#     driver: efs.csi.aws.com
+#     volumeHandle: ${EFS_ID}:/:${EFS_AP}
+#     volumeAttributes:
+#       encryptInTransit: "true"
 
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ${IPRO_LEGACY_PVC}
-  namespace: ${IPRO_LEGACY_NAMESPACE}
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: efs-sc
-  volumeName: ${IPRO_LEGACY_PV}
-  selector:
-    matchLabels:
-      name: ${IPRO_LEGACY_PV}
-  resources:
-    requests:
-      storage: ${IPRO_LEGACY_PV_SIZE}
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: ${IPRO_LEGACY_PVC}
+#   namespace: ${IPRO_LEGACY_NAMESPACE}
+# spec:
+#   accessModes:
+#     - ReadWriteMany
+#   storageClassName: efs-sc
+#   volumeName: ${IPRO_LEGACY_PV}
+#   selector:
+#     matchLabels:
+#       name: ${IPRO_LEGACY_PV}
+#   resources:
+#     requests:
+#       storage: ${IPRO_LEGACY_PV_SIZE}
 
 ---
 apiVersion: apps/v1
@@ -52,7 +52,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${IPRO_LEGACY_APP_NAME}
       namespace: ${IPRO_LEGACY_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${IPRO_LEGACY_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${IPRO_LEGACY_NODE_GROUP}
   replicas: ${IPRO_LEGACY_MIN_REP}
   revisionHistoryLimit: 4
   template:
@@ -60,7 +60,7 @@ spec:
       labels:
         app.kubernetes.io/name: ${IPRO_LEGACY_APP_NAME}
         namespace: ${IPRO_LEGACY_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${IPRO_LEGACY_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${IPRO_LEGACY_NODE_GROUP}
     spec:
       containers:
         - image: ${IPRO_LEGACY_REPOSITORY}:${TAG}
@@ -78,15 +78,15 @@ spec:
             limits:
               cpu: ${IPRO_LEGACY_LIM_CPU}
               memory: ${IPRO_LEGACY_LIM_MEM}
-          volumeMounts:
-            - mountPath: /storage
-              name: ${IPRO_LEGACY_VOLUME}
-      volumes:
-        - name: ${IPRO_LEGACY_VOLUME}
-          persistentVolumeClaim:
-            claimName: ${IPRO_LEGACY_PVC}
+      #     volumeMounts:
+      #       - mountPath: /storage
+      #         name: ${IPRO_LEGACY_VOLUME}
+      # volumes:
+      #   - name: ${IPRO_LEGACY_VOLUME}
+      #     persistentVolumeClaim:
+      #       claimName: ${IPRO_LEGACY_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${IPRO_LEGACY_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${IPRO_LEGACY_NODE_GROUP}
 
 ---
 apiVersion: autoscaling/v1
@@ -118,7 +118,7 @@ spec:
   selector:
     app.kubernetes.io/name: ${IPRO_LEGACY_APP_NAME}
     namespace: ${IPRO_LEGACY_NAMESPACE}
-    alpha.eksctl.io/nodegroup-name: ${IPRO_LEGACY_NODE_GROUP}
+    cloud.google.com/gke-nodepool: ${IPRO_LEGACY_NODE_GROUP}
 
 # ---
 # apiVersion: traefik.containo.us/v1alpha1
@@ -159,6 +159,17 @@ spec:
 #         - name: ${IPRO_LEGACY_SERVICE_NAME}
 #           port: 80
 
+# Google Managed SSL Certificate.
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: managed-certificate
+  namespace: ${GQLSWIS_NAMESPACE}
+spec:
+  domains:
+    - legacy.ipro-gcp.experience.com
+
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -166,18 +177,21 @@ metadata:
   namespace: ${IPRO_LEGACY_NAMESPACE}
   name: ${IPRO_LEGACY_INGRESS_NAME}
   annotations:
-    alb.ingress.kubernetes.io/target-type: instance
-    alb.ingress.kubernetes.io/certificate-arn: ${IPRO_LEGACY_CERTIFICATE_ARN}
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
-    alb.ingress.kubernetes.io/scheme: internal
-    alb.ingress.kubernetes.io/load-balancer-name: ${IPRO_LEGACY_ALB}
-    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=ss-prd1-v2-alb-access-logs-new,access_logs.s3.prefix=iproapilegacy-alb,idle_timeout.timeout_seconds=60
-    alb.ingress.kubernetes.io/wafv2-acl-arn: ${WAF_ARN}
-    alb.ingress.kubernetes.io/ssl-redirect: "443"
-    kubernetes.io/ingress.class: ${ING_CLS_NAME}
+    kubernetes.io/ingress.allow-http: "false"
+    networking.gke.io/managed-certificates: managed-certificate
+    kubernetes.io/ingress.global-static-ip-name: exp-prod-ipro-legacy-api  
+    # alb.ingress.kubernetes.io/target-type: instance
+    # alb.ingress.kubernetes.io/certificate-arn: ${IPRO_LEGACY_CERTIFICATE_ARN}
+    # alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    # alb.ingress.kubernetes.io/scheme: internal
+    # alb.ingress.kubernetes.io/load-balancer-name: ${IPRO_LEGACY_ALB}
+    # alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=ss-prd1-v2-alb-access-logs-new,access_logs.s3.prefix=iproapilegacy-alb,idle_timeout.timeout_seconds=60
+    # alb.ingress.kubernetes.io/wafv2-acl-arn: ${WAF_ARN}
+    # alb.ingress.kubernetes.io/ssl-redirect: "443"
+    # kubernetes.io/ingress.class: ${ING_CLS_NAME}
 spec:
   rules:
-    - host: ${IPRO_LEGACY_HOST_NAME}
+    - host: "legacy.ipro-gcp.experience.com" #${IPRO_LEGACY_HOST_NAME}
       http:
         paths:
           - path: /

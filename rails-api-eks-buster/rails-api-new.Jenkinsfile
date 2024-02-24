@@ -35,8 +35,13 @@ pipeline {
         stage('Get the Deployment files') { 
 
 
+            // steps { 
+            //     git branch: '${SS_OPS_DEPLOYMENT_BRANCH}', credentialsId: 'test-cred', url: 'git@bitbucket.org:experience-com/ss-ops.git'
+            //     fileOperations([folderCreateOperation('Docker'), folderCreateOperation('Kubernetes'), folderCopyOperation(destinationFolderPath: 'Docker', sourceFolderPath: 'deployment_pipelines/rails-api-eks-buster/Docker'), folderCopyOperation(destinationFolderPath: 'Kubernetes', sourceFolderPath: 'deployment_pipelines/rails-api-eks-buster/Kubernetes')])
+            // }
+
             steps { 
-                git branch: '${SS_OPS_DEPLOYMENT_BRANCH}', credentialsId: 'test-cred', url: 'git@bitbucket.org:experience-com/ss-ops.git'
+                git branch: 'cwx-gcp-migration-prod-eks', credentialsId: 'test-cred', url: 'git@bitbucket.org:experience-com/ss-ops.git'
                 fileOperations([folderCreateOperation('Docker'), folderCreateOperation('Kubernetes'), folderCopyOperation(destinationFolderPath: 'Docker', sourceFolderPath: 'deployment_pipelines/rails-api-eks-buster/Docker'), folderCopyOperation(destinationFolderPath: 'Kubernetes', sourceFolderPath: 'deployment_pipelines/rails-api-eks-buster/Kubernetes')])
             }
 
@@ -49,7 +54,7 @@ pipeline {
             }
 
             steps { 
-                git branch: '${BRANCH}', credentialsId: 'test-cred', url: 'git@bitbucket.org:experience-com/v2-ror-api-backend.git'
+                git branch: 'cwx-gcp-migration', credentialsId: 'test-cred', url: 'git@bitbucket.org:experience-com/v2-ror-api-backend.git'
             }
 
         }
@@ -154,39 +159,77 @@ pipeline {
                             rm "$(ls -t /var/lib/jenkins/Docker-Kubernetes/credentials/rails-api-ubuntu/rails-api* | tail -1)"
                         fi
                         cp /var/lib/jenkins/Docker-Kubernetes/rails-api/rails-api.env /var/lib/jenkins/Docker-Kubernetes/credentials/rails-api-ubuntu/"rails-api-${BUILD_NUMBER}.env"
-                        aws ecr get-login-password --region "${CLUSTER_REGION}" --profile "${CLUSTER_PROFILE}" | docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT}"
                     '''     
                     sh "cp -r /var/lib/jenkins/Docker-Kubernetes/rails-api/. ./Docker/"
-                    withCredentials([usernamePassword(credentialsId: 'EKS_DEVTEST_RAILS_SECRET_KEY_BASE', passwordVariable: 'RAILS_SECRET_KEY_BASE', usernameVariable: 'DEVTEST_RAILS_SECRET_KEY_BASE')]) {
-                            docker.build("rails-api-ubuntu:latest", "--build-arg RAILS_ENV=${env.DEVTEST_RAILS_ENV} --build-arg SECRET_KEY_BASE=${RAILS_SECRET_KEY_BASE} --build-arg RAILS_MIGRATIONS=${RAILS_MIGRATIONS} --build-arg RAILS_SEED=${RAILS_SEED} -f Docker/Dockerfile-ubuntu .")
-                        }
-                    }
-                
+                    env.PATH = "/var/lib/jenkins/google-cloud-sdk/bin:$PATH"
+                    sh '''
+                        echo ${SVC_ACCOUNT_KEY} | base64 -d > gcp-sa.json
+                        gcloud auth activate-service-account --key-file=gcp-sa.json
+                        gcloud auth configure-docker us-east4-docker.pkg.dev
+                        docker-credential-gcr configure-docker
+                        docker build -t rails-api-ubuntu:latest --build-arg RAILS_ENV=${env.DEVTEST_RAILS_ENV} --build-arg SECRET_KEY_BASE=${RAILS_SECRET_KEY_BASE} --build-arg RAILS_MIGRATIONS=${RAILS_MIGRATIONS} --build-arg RAILS_SEED=${RAILS_SEED} -f Docker/Dockerfile-ubuntu .
+                    '''
                 }
-
-        } 
+            }
+        }
 
         stage('Pushing Ubuntu docker image') { 
 
             when {
                 expression{ params.ROLLBACK == false }
             }
+            steps {
+                script {
+                    env.PATH = "/var/lib/jenkins/google-cloud-sdk/bin:$PATH"
 
-            steps { 
-
-                script
-                {
-                    sh '''aws ecr get-login-password --region "${CLUSTER_REGION}" --profile "${CLUSTER_PROFILE}" | docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT}"
-                        docker tag rails-api-ubuntu:latest "${AWS_ECR_ACCOUNT}"/"${RAILS_API_REPOSITORY_UBUNTU}":"${TAG}"
-                        docker push ${AWS_ECR_ACCOUNT}/"${RAILS_API_REPOSITORY_UBUNTU}":"${TAG}"
-                        MANIFEST=$(aws ecr batch-get-image --region "${CLUSTER_REGION}" --profile "${CLUSTER_PROFILE}" --repository-name "${RAILS_API_REPOSITORY_UBUNTU}" --image-ids imageTag="${TAG}" --query 'images[].imageManifest' --output text)
-                        aws ecr put-image --region "${CLUSTER_REGION}" --profile "${CLUSTER_PROFILE}" --repository-name "${RAILS_API_REPOSITORY_UBUNTU}" --image-tag "${BUILD_NUMBER}" --image-manifest "$MANIFEST"
+                    sh '''
+                        echo \${SVC_ACCOUNT_KEY} | base64 -d > gcp-sa.json
+                        gcloud auth activate-service-account --key-file=gcp-sa.json
+                        gcloud auth configure-docker us-east4-docker.pkg.dev
+                        docker tag rails-api-ubuntu:latest us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/"${RAILS_API_REPOSITORY_UBUNTU}":"${TAG}"
+                        docker tag rails-api-ubuntu:latest us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/"${RAILS_API_REPOSITORY_UBUNTU}":"${BUILD_NUMBER}"
+                        docker push us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/"${RAILS_API_REPOSITORY_UBUNTU}:${TAG}" us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/"${RAILS_API_REPOSITORY_UBUNTU}:${BUILD_NUMBER}"
                         docker rmi rails-api-ubuntu
-                        docker rmi ${AWS_ECR_ACCOUNT}/"${RAILS_API_REPOSITORY_UBUNTU}"'''
-
+                        docker rmi us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/"${RAILS_API_REPOSITORY_UBUNTU}"
+                        gcloud container clusters get-credentials "experiencedotcom-gke-dev" --region "us-east4-a" --project "experiencedotcom-dev"
+                        set +x
+                        . /var/lib/jenkins/Docker-Kubernetes/kubernetes_rails.env
+                        set -x
+                        if kubectl get svc "${RAILS_API_SERVICE_NAME_MAIN}" -n "${RAILS_API_NAMESPACE}"; then
+                            envsubst < ./Kubernetes/deploy-ubuntu.yaml   | kubectl rollout restart -f -
+                            envsubst < ./Kubernetes/deploy-buster.yaml   | kubectl rollout restart -f -
+                        else
+                            envsubst < ./Kubernetes/namespace.yaml  | kubectl apply -f -
+                            envsubst < ./Kubernetes/rails-deploy-ubuntu.yaml   | kubectl apply -f -
+                            envsubst < ./Kubernetes/rails-deploy-buster.yaml   | kubectl apply -f -
+                        fi
+                        '''
                 }
             }
         } 
+
+
+        // stage('Pushing Ubuntu docker image') { 
+
+        //     when {
+        //         expression{ params.ROLLBACK == false }
+        //     }
+
+        //     steps { 
+
+        //         script
+        //         {
+        //             sh '''aws ecr get-login-password --region "${CLUSTER_REGION}" --profile "${CLUSTER_PROFILE}" | docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT}"
+        //                 docker tag rails-api-ubuntu:latest "${AWS_ECR_ACCOUNT}"/"${RAILS_API_REPOSITORY_UBUNTU}":"${TAG}"
+        //                 docker push ${AWS_ECR_ACCOUNT}/"${RAILS_API_REPOSITORY_UBUNTU}":"${TAG}"
+        //                 MANIFEST=$(aws ecr batch-get-image --region "${CLUSTER_REGION}" --profile "${CLUSTER_PROFILE}" --repository-name "${RAILS_API_REPOSITORY_UBUNTU}" --image-ids imageTag="${TAG}" --query 'images[].imageManifest' --output text)
+        //                 aws ecr put-image --region "${CLUSTER_REGION}" --profile "${CLUSTER_PROFILE}" --repository-name "${RAILS_API_REPOSITORY_UBUNTU}" --image-tag "${BUILD_NUMBER}" --image-manifest "$MANIFEST"
+        //                 docker rmi rails-api-ubuntu
+        //                 docker rmi ${AWS_ECR_ACCOUNT}/"${RAILS_API_REPOSITORY_UBUNTU}"'''
+
+        //         }
+        //     }
+        // } 
 
         // stage('Deploying Buster image') { 
 
@@ -216,35 +259,35 @@ pipeline {
 
         // } 
 
-        stage('Deploying Ubuntu image') { 
+        // stage('Deploying Ubuntu image') { 
 
-            when {
-                expression{ params.ROLLBACK == false }
-            }
+        //     when {
+        //         expression{ params.ROLLBACK == false }
+        //     }
 
-            steps { 
+        //     steps { 
 
-                script
-                {
-                    sh '''aws eks update-kubeconfig --name "${CLUSTER_NAME_PROD}" --profile "${CLUSTER_PROFILE}" --region "${CLUSTER_REGION}"
-                        set +x
-                        . /var/lib/jenkins/Docker-Kubernetes/kubernetes_rails.env
-                        set -x
-                        if kubectl get svc "${RAILS_API_SERVICE_NAME_UBUNTU}" -n "${RAILS_API_NAMESPACE}"; then
-                            envsubst < ./Kubernetes/deploy-ubuntu.yaml   | kubectl rollout restart -f -
-                            envsubst < ./Kubernetes/deploy-buster.yaml   | kubectl rollout restart -f -
-                        else
-                            envsubst < ./Kubernetes/namespace.yaml  | kubectl apply -f -
-                            envsubst < ./Kubernetes/rails-deploy-ubuntu.yaml   | kubectl apply -f -
-                            envsubst < ./Kubernetes/rails-deploy-buster.yaml   | kubectl apply -f -
-                        fi
-                        '''
+        //         script
+        //         {
+        //             sh '''aws eks update-kubeconfig --name "${CLUSTER_NAME_PROD}" --profile "${CLUSTER_PROFILE}" --region "${CLUSTER_REGION}"
+        //                 set +x
+        //                 . /var/lib/jenkins/Docker-Kubernetes/kubernetes_rails.env
+        //                 set -x
+        //                 if kubectl get svc "${RAILS_API_SERVICE_NAME_UBUNTU}" -n "${RAILS_API_NAMESPACE}"; then
+        //                     envsubst < ./Kubernetes/deploy-ubuntu.yaml   | kubectl rollout restart -f -
+        //                     envsubst < ./Kubernetes/deploy-buster.yaml   | kubectl rollout restart -f -
+        //                 else
+        //                     envsubst < ./Kubernetes/namespace.yaml  | kubectl apply -f -
+        //                     envsubst < ./Kubernetes/rails-deploy-ubuntu.yaml   | kubectl apply -f -
+        //                     envsubst < ./Kubernetes/rails-deploy-buster.yaml   | kubectl apply -f -
+        //                 fi
+        //                 '''
 
-                }
+        //         }
 
-            }
+        //     }
 
-        }
+        // }
 
         // stage('Rolling back to a previous Buster image') { 
 
@@ -278,9 +321,13 @@ pipeline {
 
             steps { 
 
-                script
-                {
-                    sh '''aws eks update-kubeconfig --name "${CLUSTER_NAME_PROD}" --profile "${CLUSTER_PROFILE}" --region "${CLUSTER_REGION}"
+                script {
+                    env.PATH = "/var/lib/jenkins/google-cloud-sdk/bin:$PATH"
+
+                    sh '''
+                        echo \${SVC_ACCOUNT_KEY} | base64 -d > gcp-sa.json
+                        gcloud auth activate-service-account --key-file=gcp-sa.json
+                        gcloud container clusters get-credentials "experiencedotcom-gke-dev" --region "us-east4-a" --project "experiencedotcom-dev"
                         set +x
                         . /var/lib/jenkins/Docker-Kubernetes/kubernetes_rails.env
                         set -x
@@ -288,14 +335,9 @@ pipeline {
                         envsubst < ./Kubernetes/deploy-ubuntu.yaml | kubectl rollout restart -f -
                         envsubst < ./Kubernetes/deploy-buster.yaml | kubectl rollout restart -f -
                         '''
-
                 }
-
             }
-
         }
-  
-
     }
 
     post {
@@ -308,8 +350,6 @@ pipeline {
             }
             cleanWs()
         }
-
     }
-
 }
 

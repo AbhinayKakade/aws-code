@@ -4,42 +4,42 @@ kind: Namespace
 metadata:
   name: ${SURVEY_TAKER_NAMESPACE}
 
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: ${SURVEY_TAKER_PV}
-spec:
-  capacity:
-    storage: ${SURVEY_TAKER_PV_SIZE}
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: efs-sc
-  csi:
-    driver: efs.csi.aws.com
-    volumeHandle: ${EFS_ID}:/:${EFS_AP}
-    volumeAttributes:
-      encryptInTransit: "true"
+# ---
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: ${SURVEY_TAKER_PV}
+# spec:
+#   capacity:
+#     storage: ${SURVEY_TAKER_PV_SIZE}
+#   volumeMode: Filesystem
+#   accessModes:
+#     - ReadWriteMany
+#   persistentVolumeReclaimPolicy: Retain
+#   storageClassName: efs-sc
+#   csi:
+#     driver: efs.csi.aws.com
+#     volumeHandle: ${EFS_ID}:/:${EFS_AP}
+#     volumeAttributes:
+#       encryptInTransit: "true"
 
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ${SURVEY_TAKER_PVC}
-  namespace: ${SURVEY_TAKER_NAMESPACE}
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: efs-sc
-  volumeName: ${SURVEY_TAKER_PV}
-  selector:
-    matchLabels:
-      name: ${SURVEY_TAKER_PV}
-  resources:
-    requests:
-      storage: ${SURVEY_TAKER_PV_SIZE}
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: ${SURVEY_TAKER_PVC}
+#   namespace: ${SURVEY_TAKER_NAMESPACE}
+# spec:
+#   accessModes:
+#     - ReadWriteMany
+#   storageClassName: efs-sc
+#   volumeName: ${SURVEY_TAKER_PV}
+#   selector:
+#     matchLabels:
+#       name: ${SURVEY_TAKER_PV}
+#   resources:
+#     requests:
+#       storage: ${SURVEY_TAKER_PV_SIZE}
 
 ---
 apiVersion: apps/v1
@@ -52,7 +52,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${SURVEY_TAKER_SHORTURL_APP_NAME}
       namespace: ${SURVEY_TAKER_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${SURVEY_TAKER_NODE_GROUP}
+      cloud.google.com/gke-nodepool: soc-st-ng # ${SURVEY_TAKER_NODE_GROUP}
   replicas: ${SURVEY_TAKER_SHORTURL_MIN_REP}
   revisionHistoryLimit: 4
   template:
@@ -60,10 +60,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${SURVEY_TAKER_SHORTURL_APP_NAME}
         namespace: ${SURVEY_TAKER_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${SURVEY_TAKER_NODE_GROUP}
+        cloud.google.com/gke-nodepool: soc-st-ng # ${SURVEY_TAKER_NODE_GROUP}
     spec:
       containers:
-        - image: ${SURVEY_TAKER_REPOSITORY}:${TAG}
+        - image: us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/survey-taker:latest
           imagePullPolicy: Always
           name: ${SURVEY_TAKER_SHORTURL_APP_NAME}
           ports:
@@ -78,15 +78,15 @@ spec:
             limits:
               cpu: ${SURVEY_TAKER_SHORTURL_LIM_CPU}
               memory: ${SURVEY_TAKER_SHORTURL_LIM_MEM}
-          volumeMounts:
-            - mountPath: /storage
-              name: ${SURVEY_TAKER_SHORTURL_VOLUME}
-      volumes:
-        - name: ${SURVEY_TAKER_SHORTURL_VOLUME}
-          persistentVolumeClaim:
-            claimName: ${SURVEY_TAKER_PVC}
+      #     volumeMounts:
+      #       - mountPath: /storage
+      #         name: ${SURVEY_TAKER_SHORTURL_VOLUME}
+      # volumes:
+      #   - name: ${SURVEY_TAKER_SHORTURL_VOLUME}
+      #     persistentVolumeClaim:
+      #       claimName: ${SURVEY_TAKER_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${SURVEY_TAKER_NODE_GROUP}
+        cloud.google.com/gke-nodepool: soc-st-ng # ${SURVEY_TAKER_NODE_GROUP}
 ---
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
@@ -117,7 +117,7 @@ spec:
   selector:
     app.kubernetes.io/name: ${SURVEY_TAKER_SHORTURL_APP_NAME}
     namespace: ${SURVEY_TAKER_NAMESPACE}
-    alpha.eksctl.io/nodegroup-name: ${SURVEY_TAKER_NODE_GROUP}
+    cloud.google.com/gke-nodepool: soc-st-ng # ${SURVEY_TAKER_NODE_GROUP}
 
 # ---
 # apiVersion: traefik.containo.us/v1alpha1
@@ -158,6 +158,18 @@ spec:
 #         - name: ${SURVEY_TAKER_SHORTURL_SERVICE_NAME}
 #           port: 80
 
+# Google Managed SSL Certificate.
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: managed-certificate
+  namespace: ${SURVEY_TAKER_NAMESPACE}
+spec:
+  domains:
+    - p-gcp.xprn.co
+
+
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -165,18 +177,24 @@ metadata:
   namespace: ${SURVEY_TAKER_NAMESPACE}
   name: ${SURVEY_TAKER_SHORTURL_INGRESS_NAME}
   annotations:
-    alb.ingress.kubernetes.io/target-type: instance
-    alb.ingress.kubernetes.io/certificate-arn: ${SURVEY_TAKER_SHORTURL_CERTIFICATE_ARN}
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/load-balancer-name: ${SURVEY_TAKER_SHORTURL_ALB}
-    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=ss-prd1-v2-alb-access-logs-new,access_logs.s3.prefix=surveytakershorturl-alb,idle_timeout.timeout_seconds=60
-    alb.ingress.kubernetes.io/wafv2-acl-arn: ${WAF_ARN}
-    alb.ingress.kubernetes.io/ssl-redirect: "443"
-    kubernetes.io/ingress.class: ${ING_CLS_NAME}
+    # alb.ingress.kubernetes.io/target-type: instance
+    # alb.ingress.kubernetes.io/certificate-arn: ${SURVEY_TAKER_SHORTURL_CERTIFICATE_ARN}
+    # alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    # alb.ingress.kubernetes.io/scheme: internet-facing
+    # alb.ingress.kubernetes.io/load-balancer-name: ${SURVEY_TAKER_SHORTURL_ALB}
+    # alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=ss-prd1-v2-alb-access-logs-new,access_logs.s3.prefix=surveytakershorturl-alb,idle_timeout.timeout_seconds=60
+    # alb.ingress.kubernetes.io/wafv2-acl-arn: ${WAF_ARN}
+    # alb.ingress.kubernetes.io/ssl-redirect: "443"
+    # kubernetes.io/ingress.class: ${ING_CLS_NAME}
+
+    kubernetes.io/ingress.allow-http: "false"
+    networking.gke.io/managed-certificates: managed-certificate
+    kubernetes.io/ingress.global-static-ip-name: survey-taker-shorturl-host-name
+
 spec:
   rules:
-    - host: ${SURVEY_TAKER_SHORTURL_HOST_NAME}
+    # - host: ${SURVEY_TAKER_SHORTURL_HOST_NAME}
+    - host: p-gcp.xprn.co
       http:
         paths:
           - path: /

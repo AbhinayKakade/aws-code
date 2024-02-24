@@ -10,7 +10,6 @@ pipeline {
                 git branch: '${SS_OPS_DEPLOYMENT_BRANCH}', credentialsId: 'test-cred', url: 'git@bitbucket.org:experience-com/ss-ops.git'
                 fileOperations([folderCreateOperation('Docker'), folderCreateOperation('Kubernetes'), folderCreateOperation('social-monitor'), folderCopyOperation(destinationFolderPath: 'Docker', sourceFolderPath: 'deployment_pipelines/social-monitor-eks/Docker'), folderCopyOperation(destinationFolderPath: 'Kubernetes', sourceFolderPath: 'deployment_pipelines/social-monitor-eks/Kubernetes')])
             }
-
         }
 
         stage('Checkout to branch') { 
@@ -20,7 +19,6 @@ pipeline {
                     git branch: '${BRANCH}', credentialsId: 'test-cred', url: 'git@bitbucket.org:experience-com/social-monitor.git'
                 }
             }
-
         } 
 
         stage('Building Docker image') { 

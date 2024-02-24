@@ -42,12 +42,12 @@ spec:
           #   periodSeconds: 20
           #   failureThreshold: 2
           #   timeoutSeconds: 2
-          volumeMounts:
-            - mountPath: /storage
-              name: ${WORKER_RAILSAPI_VOLUME}
-      volumes:
-        - name: ${WORKER_RAILSAPI_VOLUME}
-          persistentVolumeClaim:
-            claimName: ${WORKER_RAILSAPI_PVC}
+#          volumeMounts:
+#            - mountPath: /storage
+#              name: ${WORKER_RAILSAPI_VOLUME}
+#      volumes:
+#        - name: ${WORKER_RAILSAPI_VOLUME}
+#          persistentVolumeClaim:
+#            claimName: ${WORKER_RAILSAPI_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${WORKER_RAILSAPI_NODE_GROUP}
+        cloud.google.com/gke-nodepool: rails-ng #${WORKER_RAILSAPI_NODE_GROUP}

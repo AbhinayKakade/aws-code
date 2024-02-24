@@ -16,7 +16,7 @@ spec:
         app.kubernetes.io/name: ${WORKER_APP_NAME_DISPATCHER}
     spec:
       containers:
-        - image: ${WORKER_REPOSITORY}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/worker4-rails-api:latest"
           imagePullPolicy: Always
           name: ${WORKER_APP_NAME_DISPATCHER}
           command:
@@ -42,12 +42,12 @@ spec:
           #   periodSeconds: 20
           #   failureThreshold: 2
           #   timeoutSeconds: 2
-          volumeMounts:
-            - mountPath: /storage
-              name: ${WORKER_RAILSAPI_VOLUME}
-      volumes:
-        - name: ${WORKER_RAILSAPI_VOLUME}
-          persistentVolumeClaim:
-            claimName: ${WORKER_RAILSAPI_PVC}
+#          volumeMounts:
+#            - mountPath: /storage
+#              name: ${WORKER_RAILSAPI_VOLUME}
+#      volumes:
+#        - name: ${WORKER_RAILSAPI_VOLUME}
+#          persistentVolumeClaim:
+#            claimName: ${WORKER_RAILSAPI_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${WORKER_RAILSAPI_NODE_GROUP}
+        cloud.google.com/gke-nodepool: rails-ng #${WORKER_RAILSAPI_NODE_GROUP}

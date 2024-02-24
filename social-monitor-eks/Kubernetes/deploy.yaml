@@ -9,7 +9,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${SOCIAL_MONITOR_APP_NAME}
       namespace: ${SOCIAL_MONITOR_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${SOCIAL_MONITOR_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${SOCIAL_MONITOR_NODE_GROUP} # soc_st_ng
   replicas: ${SOCIAL_MONITOR_MIN_REP}
   revisionHistoryLimit: 4
   template:
@@ -17,7 +17,7 @@ spec:
       labels:
         app.kubernetes.io/name: ${SOCIAL_MONITOR_APP_NAME}
         namespace: ${SOCIAL_MONITOR_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${SOCIAL_MONITOR_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${SOCIAL_MONITOR_NODE_GROUP} # soc_st_ng
     spec:
       containers:
         - image: ${SOCIAL_MONITOR_REPOSITORY}:${TAG}
@@ -45,12 +45,12 @@ spec:
             periodSeconds: 5
             successThreshold: 1
             timeoutSeconds: 5
-          volumeMounts:
-            - mountPath: /storage
-              name: ${SOCIAL_MONITOR_VOLUME}
-      volumes:
-        - name: ${SOCIAL_MONITOR_VOLUME}
-          persistentVolumeClaim:
-            claimName: ${SOCIAL_MONITOR_PVC}
-      nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${SOCIAL_MONITOR_NODE_GROUP}
+      #     volumeMounts:
+      #       - mountPath: /storage
+      #         name: ${SOCIAL_MONITOR_VOLUME}
+      # volumes:
+      #   - name: ${SOCIAL_MONITOR_VOLUME}
+      #     persistentVolumeClaim:
+      #       claimName: ${SOCIAL_MONITOR_PVC}
+      nodeSelector: 
+        cloud.google.com/gke-nodepool: ${SOCIAL_MONITOR_NODE_GROUP} # soc_st_ng

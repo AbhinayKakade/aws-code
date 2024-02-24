@@ -9,7 +9,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${SURVEY_TAKER_APP_NAME}
       namespace: ${SURVEY_TAKER_NAMESPACE}
-      cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
+      cloud.google.com/gke-nodepool: soc-st-ng # ${SURVEY_TAKER_NODE_GROUP}
   replicas: ${SURVEY_TAKER_MIN_REP}
   revisionHistoryLimit: 4
   template:
@@ -17,7 +17,7 @@ spec:
       labels:
         app.kubernetes.io/name: ${SURVEY_TAKER_APP_NAME}
         namespace: ${SURVEY_TAKER_NAMESPACE}
-        cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
+        cloud.google.com/gke-nodepool: soc-st-ng # ${SURVEY_TAKER_NODE_GROUP}
     spec:
       containers:
         - image: us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/survey-taker:latest
@@ -53,7 +53,7 @@ spec:
       #     persistentVolumeClaim:
       #       claimName: ${SURVEY_TAKER_PVC}
       nodeSelector:
-        cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
+        cloud.google.com/gke-nodepool: soc-st-ng # ${SURVEY_TAKER_NODE_GROUP}
 
 ---
 apiVersion: apps/v1
@@ -66,7 +66,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${SURVEY_TAKER_SHORTURL_APP_NAME}
       namespace: ${SURVEY_TAKER_NAMESPACE}
-      cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
+      cloud.google.com/gke-nodepool: soc-st-ng # ${SURVEY_TAKER_NODE_GROUP}
   replicas: ${SURVEY_TAKER_SHORTURL_MIN_REP}
   revisionHistoryLimit: 4
   template:
@@ -74,7 +74,7 @@ spec:
       labels:
         app.kubernetes.io/name: ${SURVEY_TAKER_SHORTURL_APP_NAME}
         namespace: ${SURVEY_TAKER_NAMESPACE}
-        cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
+        cloud.google.com/gke-nodepool: soc-st-ng # ${SURVEY_TAKER_NODE_GROUP}
     spec:
       containers:
         - image: us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/survey-taker:latest
@@ -100,4 +100,4 @@ spec:
       #     persistentVolumeClaim:
       #       claimName: ${SURVEY_TAKER_PVC}
       nodeSelector:
-        cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
+        cloud.google.com/gke-nodepool: soc-st-ng # ${SURVEY_TAKER_NODE_GROUP}

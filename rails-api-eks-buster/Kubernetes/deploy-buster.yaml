@@ -10,7 +10,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_API_APP_NAME}
       namespace: ${RAILS_API_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
   replicas: ${RAILS_API_MIN_REP_MAIN}
   revisionHistoryLimit: 4
   template:
@@ -18,10 +18,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_API_APP_NAME}
         namespace: ${RAILS_API_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_API_REPOSITORY}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-api-ubuntu:latest"
           imagePullPolicy: Always
           name: ${RAILS_API_APP_NAME}
           ports:
@@ -64,7 +64,7 @@ spec:
           persistentVolumeClaim:
             claimName: ${RAILS_API_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_API_NODE_GROUP}
 
 # /v2/core/cable
 ---
@@ -78,7 +78,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_API_APP_NAME_CABLE}
       namespace: ${RAILS_API_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
   replicas: ${RAILS_API_MIN_REP_CABLE}
   revisionHistoryLimit: 4
   template:
@@ -86,10 +86,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_API_APP_NAME_CABLE}
         namespace: ${RAILS_API_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_API_REPOSITORY}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-api-ubuntu:latest"
           imagePullPolicy: Always
           name: ${RAILS_API_APP_NAME_CABLE}
           ports:
@@ -132,7 +132,7 @@ spec:
           persistentVolumeClaim:
             claimName: ${RAILS_API_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_API_NODE_GROUP}
 
 # /v2/core
 
@@ -147,7 +147,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_API_APP_NAME_CORE}
       namespace: ${RAILS_API_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
   replicas: ${RAILS_API_MIN_REP_CORE}
   revisionHistoryLimit: 4
   template:
@@ -155,10 +155,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_API_APP_NAME_CORE}
         namespace: ${RAILS_API_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_API_REPOSITORY}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-api-ubuntu:latest"
           imagePullPolicy: Always
           name: ${RAILS_API_APP_NAME_CORE}
           ports:
@@ -201,7 +201,7 @@ spec:
           persistentVolumeClaim:
             claimName: ${RAILS_API_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_API_NODE_GROUP}
 
 # /v2/admin
 ---
@@ -215,7 +215,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_API_APP_NAME_ADMIN}
       namespace: ${RAILS_API_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
   replicas: ${RAILS_API_MIN_REP_ADMIN}
   revisionHistoryLimit: 4
   template:
@@ -223,10 +223,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_API_APP_NAME_ADMIN}
         namespace: ${RAILS_API_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_API_REPOSITORY}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-api-ubuntu:latest"
           imagePullPolicy: Always
           name: ${RAILS_API_APP_NAME_ADMIN}
           ports:
@@ -269,7 +269,7 @@ spec:
           persistentVolumeClaim:
             claimName: ${RAILS_API_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_API_NODE_GROUP}
 
 # /v2/campaign
 ---
@@ -283,7 +283,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_API_APP_NAME_CAMPAIGN}
       namespace: ${RAILS_API_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
   replicas: ${RAILS_API_MIN_REP_CAMPAIGN}
   revisionHistoryLimit: 4
   template:
@@ -291,10 +291,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_API_APP_NAME_CAMPAIGN}
         namespace: ${RAILS_API_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_API_REPOSITORY}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-api-ubuntu:latest"
           imagePullPolicy: Always
           name: ${RAILS_API_APP_NAME_CAMPAIGN}
           ports:
@@ -337,7 +337,7 @@ spec:
           persistentVolumeClaim:
             claimName: ${RAILS_API_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_API_NODE_GROUP}
 
 # /v2/public
 ---
@@ -351,7 +351,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_API_APP_NAME_PUBLIC}
       namespace: ${RAILS_API_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
   replicas: ${RAILS_API_MIN_REP_PUBLIC}
   revisionHistoryLimit: 4
   template:
@@ -359,10 +359,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_API_APP_NAME_PUBLIC}
         namespace: ${RAILS_API_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_API_REPOSITORY}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-api-ubuntu:latest"
           imagePullPolicy: Always
           name: ${RAILS_API_APP_NAME_PUBLIC}
           ports:
@@ -405,7 +405,7 @@ spec:
           persistentVolumeClaim:
             claimName: ${RAILS_API_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_API_NODE_GROUP}
 
 # /v2/ipro
 ---
@@ -419,7 +419,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_API_APP_NAME_IPRO}
       namespace: ${RAILS_API_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
   replicas: ${RAILS_API_MIN_REP_IPRO}
   revisionHistoryLimit: 4
   template:
@@ -427,10 +427,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_API_APP_NAME_IPRO}
         namespace: ${RAILS_API_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_API_REPOSITORY}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-api-ubuntu:latest"
           imagePullPolicy: Always
           name: ${RAILS_API_APP_NAME_IPRO}
           ports:
@@ -473,4 +473,4 @@ spec:
           persistentVolumeClaim:
             claimName: ${RAILS_API_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_API_NODE_GROUP}

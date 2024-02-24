@@ -15,7 +15,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${SURVEY_TAKER_APP_NAME}
       namespace: ${SURVEY_TAKER_NAMESPACE}
-      cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
+      cloud.google.com/gke-nodepool: soc-st-ng # ${SURVEY_TAKER_NODE_GROUP}
   replicas: ${SURVEY_TAKER_MIN_REP}
   revisionHistoryLimit: 4
   template:
@@ -23,7 +23,7 @@ spec:
       labels:
         app.kubernetes.io/name: ${SURVEY_TAKER_APP_NAME}
         namespace: ${SURVEY_TAKER_NAMESPACE}
-        cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
+        cloud.google.com/gke-nodepool: soc-st-ng # ${SURVEY_TAKER_NODE_GROUP}
     spec:
       containers:
         - image: us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/survey-taker:latest
@@ -59,7 +59,7 @@ spec:
       #     persistentVolumeClaim:
       #       claimName: ${SURVEY_TAKER_PVC}
       nodeSelector:
-        cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
+        cloud.google.com/gke-nodepool: soc-st-ng # ${SURVEY_TAKER_NODE_GROUP}
 
 ---
 apiVersion: autoscaling/v1
@@ -91,7 +91,7 @@ spec:
   selector:
     app.kubernetes.io/name: ${SURVEY_TAKER_APP_NAME}
     namespace: ${SURVEY_TAKER_NAMESPACE}
-    cloud.google.com/gke-nodepool: ${SURVEY_TAKER_NODE_GROUP}
+    cloud.google.com/gke-nodepool: soc-st-ng # ${SURVEY_TAKER_NODE_GROUP}
 
 # ---
 # apiVersion: traefik.containo.us/v1alpha1
@@ -134,15 +134,15 @@ spec:
 
 
 # Google Managed SSL Certificate.
-# ---
-# apiVersion: networking.gke.io/v1
-# kind: ManagedCertificate
-# metadata:
-#   name: managed-certificate
-#   namespace: ${SURVEY_TAKER_NAMESPACE}
-# spec:
-#   domains:
-#     - proapi-gcp.experience.com
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: managed-certificate
+  namespace: ${SURVEY_TAKER_NAMESPACE}
+spec:
+  domains:
+    - surveys-gcp.experience.com
 
 
 ---
@@ -162,13 +162,14 @@ metadata:
     # alb.ingress.kubernetes.io/ssl-redirect: "443"
     # kubernetes.io/ingress.class: ${ING_CLS_NAME}
 
-    # kubernetes.io/ingress.allow-http: "false"
-    # networking.gke.io/managed-certificates: managed-certificate
-    # kubernetes.io/ingress.global-static-ip-name: exp-prod-gqlswis
+    kubernetes.io/ingress.allow-http: "false"
+    networking.gke.io/managed-certificates: managed-certificate
+    kubernetes.io/ingress.global-static-ip-name: survey-taker-host-name
 spec:
   rules:
     # - host: ${SURVEY_TAKER_HOST_NAME}
-    - http:
+    - host: surveys-gcp.experience.com
+      http:
         paths:
           - path: /
             pathType: Prefix

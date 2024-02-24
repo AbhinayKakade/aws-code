@@ -9,7 +9,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${DART_APP_NAME}
       namespace: ${DART_NAMESPACE}
-      cloud.google.com/gke-nodepool: swis_ng # ${DART_NODE_GROUP}
+      cloud.google.com/gke-nodepool: swis-ng # ${DART_NODE_GROUP}  
   replicas: ${DART_MIN_REP}
   revisionHistoryLimit: 4
   template:
@@ -17,7 +17,7 @@ spec:
       labels:
         app.kubernetes.io/name: ${DART_APP_NAME}
         namespace: ${DART_NAMESPACE}
-        cloud.google.com/gke-nodepool: swis_ng # ${DART_NODE_GROUP}
+        cloud.google.com/gke-nodepool: swis-ng # ${DART_NODE_GROUP}  
     spec:
       containers:
         # - image: ${DART_REPOSITORY}:${TAG}
@@ -54,4 +54,4 @@ spec:
       #     persistentVolumeClaim:
       #       claimName: ${DART_PVC}
       nodeSelector:
-        cloud.google.com/gke-nodepool: swis_ng # ${DART_NODE_GROUP}
+        cloud.google.com/gke-nodepool: swis-ng # ${DART_NODE_GROUP} 

@@ -9,7 +9,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${CHAT_APP_NAME}
       namespace: ${CHAT_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${CHAT_NODE_GROUP}
+      cloud.google.com/gke-nodepool: swis-ng #  ${CHAT_NODE_GROUP}
   replicas: ${CHAT_MIN_REP}
   revisionHistoryLimit: 4
   template:
@@ -17,10 +17,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${CHAT_APP_NAME}
         namespace: ${CHAT_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${CHAT_NODE_GROUP}
+        cloud.google.com/gke-nodepool: swis-ng # ${CHAT_NODE_GROUP}
     spec:
       containers:
-        - image: ${CHAT_REPOSITORY}:${TAG}
+        - image: us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/chat:latest
           imagePullPolicy: Always
           name: ${CHAT_APP_NAME}
           ports:
@@ -45,22 +45,22 @@ spec:
             periodSeconds: 5
             successThreshold: 1
             timeoutSeconds: 10
-          volumeMounts:
-            - mountPath: /storage
-              name: ${CHAT_VOLUME}
-            - mountPath: /etc/nginx/nginx.conf
-              name: nginx-conf
-              subPath: nginx.conf
-              readOnly: true
-      volumes:
-        - name: ${CHAT_VOLUME}
-          persistentVolumeClaim:
-            claimName: ${CHAT_PVC}
-        - name: nginx-conf
-          configMap:
-            name: nginxconfig
-            items:
-              - key: nginx.conf
-                path: nginx.conf
+      #     volumeMounts:
+      #       - mountPath: /storage
+      #         name: ${CHAT_VOLUME}
+      #       - mountPath: /etc/nginx/nginx.conf
+      #         name: nginx-conf
+      #         subPath: nginx.conf
+      #         readOnly: true
+      # volumes:
+      #   - name: ${CHAT_VOLUME}
+      #     persistentVolumeClaim:
+      #       claimName: ${CHAT_PVC}
+      #   - name: nginx-conf
+      #     configMap:
+      #       name: nginxconfig
+      #       items:
+      #         - key: nginx.conf
+      #           path: nginx.conf
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${CHAT_NODE_GROUP}
+        cloud.google.com/gke-nodepool: swis-ng # ${CHAT_NODE_GROUP}

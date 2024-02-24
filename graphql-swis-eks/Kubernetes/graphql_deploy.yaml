@@ -85,7 +85,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${GQLSWIS_APP_NAME}
       namespace: ${GQLSWIS_NAMESPACE}
-      cloud.google.com/gke-nodepool: swis-ng #${GQLSWIS_NODE_GROUP}
+      cloud.google.com/gke-nodepool: swis-ng 
   replicas: ${GQLSWIS_MIN_REP}
   revisionHistoryLimit: 4
   template:
@@ -93,7 +93,7 @@ spec:
       labels:
         app.kubernetes.io/name: ${GQLSWIS_APP_NAME}
         namespace: ${GQLSWIS_NAMESPACE}
-        cloud.google.com/gke-nodepool: swis-ng #${GQLSWIS_NODE_GROUP}
+        cloud.google.com/gke-nodepool: swis-ng
     spec:
       serviceAccountName: ksa-sa
       containers:
@@ -142,7 +142,7 @@ spec:
       #     persistentVolumeClaim:
       #       claimName: ${GQLSWIS_PVC}
       nodeSelector:
-        cloud.google.com/gke-nodepool: swis-ng #${GQLSWIS_NODE_GROUP}
+        cloud.google.com/gke-nodepool: swis-ng
 
 # graphql hpa
 ---
@@ -209,7 +209,7 @@ spec:
   selector:
     app.kubernetes.io/name: ${GQLSWIS_APP_NAME}
     namespace: ${GQLSWIS_NAMESPACE}
-    cloud.google.com/gke-nodepool: swis-ng #${GQLSWIS_NODE_GROUP}
+    cloud.google.com/gke-nodepool: swis-ng
 
 # Google Managed SSL Certificate.
 ---

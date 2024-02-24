@@ -9,7 +9,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${IPRO_LEGACY_APP_NAME}
       namespace: ${IPRO_LEGACY_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${IPRO_LEGACY_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${IPRO_LEGACY_NODE_GROUP}
   replicas: ${IPRO_LEGACY_MIN_REP}
   revisionHistoryLimit: 4
   template:
@@ -17,7 +17,7 @@ spec:
       labels:
         app.kubernetes.io/name: ${IPRO_LEGACY_APP_NAME}
         namespace: ${IPRO_LEGACY_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${IPRO_LEGACY_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${IPRO_LEGACY_NODE_GROUP}
     spec:
       containers:
         - image: ${IPRO_LEGACY_REPOSITORY}:${TAG}
@@ -35,12 +35,12 @@ spec:
             limits:
               cpu: ${IPRO_LEGACY_LIM_CPU}
               memory: ${IPRO_LEGACY_LIM_MEM}
-          volumeMounts:
-            - mountPath: /storage
-              name: ${IPRO_LEGACY_VOLUME}
-      volumes:
-        - name: ${IPRO_LEGACY_VOLUME}
-          persistentVolumeClaim:
-            claimName: ${IPRO_LEGACY_PVC}
+      #     volumeMounts:
+      #       - mountPath: /storage
+      #         name: ${IPRO_LEGACY_VOLUME}
+      # volumes:
+      #   - name: ${IPRO_LEGACY_VOLUME}
+      #     persistentVolumeClaim:
+      #       claimName: ${IPRO_LEGACY_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${IPRO_LEGACY_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${IPRO_LEGACY_NODE_GROUP}

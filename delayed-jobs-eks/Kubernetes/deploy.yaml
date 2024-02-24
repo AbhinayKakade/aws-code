@@ -9,7 +9,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_DELAYED_JOBS_APP_NAME}
       namespace: ${RAILS_DELAYED_JOBS_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_DELAYED_JOBS_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_DELAYED_JOBS_NODE_GROUP}
   replicas: ${RAILS_DELAYED_JOBS_MIN_REP}
   revisionHistoryLimit: 4
   template:
@@ -17,10 +17,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_DELAYED_JOBS_APP_NAME}
         namespace: ${RAILS_DELAYED_JOBS_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_DELAYED_JOBS_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_DELAYED_JOBS_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_DELAYED_JOBS_REPOSITORY}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-delayed-jobs:latest"
           imagePullPolicy: Always
           command: ["/bin/sh", "-c"]
           args: ["RAILS_ENV=production bin/delayed_job run"]
@@ -53,7 +53,7 @@ spec:
           persistentVolumeClaim:
             claimName: ${RAILS_DELAYED_JOBS_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_DELAYED_JOBS_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_DELAYED_JOBS_NODE_GROUP}
 
 ---
 apiVersion: apps/v1
@@ -66,7 +66,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_APP_NAME_SIDEKIQ}
       namespace: ${RAILS_DELAYED_JOBS_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_DELAYED_JOBS_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_DELAYED_JOBS_NODE_GROUP}
   replicas: ${RAILS_SIDEKIQ_MIN_REP}
   revisionHistoryLimit: 4
   template:
@@ -74,10 +74,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_APP_NAME_SIDEKIQ}
         namespace: ${RAILS_DELAYED_JOBS_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_DELAYED_JOBS_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_DELAYED_JOBS_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_DELAYED_JOBS_REPOSITORY}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-delayed-jobs:latest"
           imagePullPolicy: Always
           command: ["/bin/sh", "-c"]
           args: ["bundle exec sidekiq -C config/sidekiq.yml -e production"]
@@ -110,4 +110,4 @@ spec:
           persistentVolumeClaim:
             claimName: ${RAILS_DELAYED_JOBS_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_DELAYED_JOBS_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_DELAYED_JOBS_NODE_GROUP}

@@ -164,7 +164,7 @@ pipeline {
                     sh '''
                         echo ${SVC_ACCOUNT_KEY} | base64 -d > gcp-sa.json
                         gcloud auth activate-service-account --key-file=gcp-sa.json
-                        docker tag gcp-graphql:latest us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/"${DART_REPOSITORY}":"${TAG}"
+                        docker tag dart:latest us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/"${DART_REPOSITORY}":"${TAG}"
                         docker push us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/"${DART_REPOSITORY}":"${TAG}"
 
                         gcloud container clusters get-credentials "experiencedotcom-gke-dev" --region "us-east4-a" --project "experiencedotcom-dev"

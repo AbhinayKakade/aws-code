@@ -28,12 +28,12 @@ spec:
             limits:
               cpu: ${WORKER_DISPATCHER_ZERO_LIM_CPU}
               memory: ${WORKER_DISPATCHER_ZERO_LIM_MEM}
-          volumeMounts:
-            - mountPath: /storage
-              name: ${WORKER_RAILSAPI_VOLUME}
-      volumes:
-        - name: ${WORKER_RAILSAPI_VOLUME}
-          persistentVolumeClaim:
-            claimName: ${WORKER_RAILSAPI_PVC}
+#          volumeMounts:
+#            - mountPath: /storage
+#              name: ${WORKER_RAILSAPI_VOLUME}
+#      volumes:
+#        - name: ${WORKER_RAILSAPI_VOLUME}
+#          persistentVolumeClaim:
+#            claimName: ${WORKER_RAILSAPI_PVC}
       nodeSelector:
         "eks.amazonaws.com/nodegroup": ${WORKER_RAILSAPI_NODE_GROUP}

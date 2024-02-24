@@ -16,9 +16,11 @@ spec:
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: efs-sc
+  # storageClassName: efs-sc
+  storageClassName: "standard-rwx"
   csi:
-    driver: efs.csi.aws.com
+    driver: filestore.csi.storage.gke.io
+    # driver: efs.csi.aws.com
     volumeHandle: ${EFS_ID}:/:${EFS_AP}
     volumeAttributes:
       encryptInTransit: "true"
@@ -32,7 +34,8 @@ metadata:
 spec:
   accessModes:
     - ReadWriteMany
-  storageClassName: efs-sc
+  # storageClassName: efs-sc
+  storageClassName: "standard-rwx"
   volumeName: ${RAILS_API_PV}
   selector:
     matchLabels:
@@ -52,7 +55,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${RAILS_API_APP_NAME_UBUNTU}
       namespace: ${RAILS_API_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
   replicas: ${RAILS_API_MIN_REP_UBUNTU}
   revisionHistoryLimit: 4
   template:
@@ -60,10 +63,10 @@ spec:
       labels:
         app.kubernetes.io/name: ${RAILS_API_APP_NAME_UBUNTU}
         namespace: ${RAILS_API_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}
     spec:
       containers:
-        - image: ${RAILS_API_REPOSITORY_UBUNTU}:${TAG}
+        - image: "us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/rails-api-ubuntu:latest"
           imagePullPolicy: Always
           name: ${RAILS_API_APP_NAME_UBUNTU}
           ports:
@@ -106,7 +109,7 @@ spec:
           persistentVolumeClaim:
             claimName: ${RAILS_API_PVC}
       nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${RAILS_API_NODE_GROUP}
+        "cloud.google.com/gke-nodepool": ${RAILS_API_NODE_GROUP}
 
 # rails-api hpa
 ---
@@ -173,4 +176,4 @@ spec:
   selector:
     app.kubernetes.io/name: ${RAILS_API_APP_NAME_UBUNTU}
     namespace: ${RAILS_API_NAMESPACE}
-    alpha.eksctl.io/nodegroup-name: ${RAILS_API_NODE_GROUP}
+    cloud.google.com/gke-nodepool: ${RAILS_API_NODE_GROUP}

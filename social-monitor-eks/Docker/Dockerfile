@@ -1,6 +1,6 @@
 #FROM 387102133919.dkr.ecr.us-east-1.amazonaws.com/node-v19.6.1:latest
 
-FROM 387102133919.dkr.ecr.us-east-1.amazonaws.com/node-v20.3.1:latest
+FROM us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/node-v20.3.1:latest
 
 WORKDIR /var/lib/social-monitor-api
 

@@ -4,42 +4,42 @@ kind: Namespace
 metadata:
   name: ${SOCIAL_MONITOR_NAMESPACE}
 
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: ${SOCIAL_MONITOR_PV}
-spec:
-  capacity:
-    storage: ${SOCIAL_MONITOR_PV_SIZE}
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: efs-sc
-  csi:
-    driver: efs.csi.aws.com
-    volumeHandle: ${EFS_ID}:/:${EFS_AP}
-    volumeAttributes:
-      encryptInTransit: "true"
+# ---
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: ${SOCIAL_MONITOR_PV}
+# spec:
+#   capacity:
+#     storage: ${SOCIAL_MONITOR_PV_SIZE}
+#   volumeMode: Filesystem
+#   accessModes:
+#     - ReadWriteMany
+#   persistentVolumeReclaimPolicy: Retain
+#   storageClassName: efs-sc
+#   csi:
+#     driver: efs.csi.aws.com
+#     volumeHandle: ${EFS_ID}:/:${EFS_AP}
+#     volumeAttributes:
+#       encryptInTransit: "true"
 
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ${SOCIAL_MONITOR_PVC}
-  namespace: ${SOCIAL_MONITOR_NAMESPACE}
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: efs-sc
-  volumeName: ${SOCIAL_MONITOR_PV}
-  selector:
-    matchLabels:
-      name: ${SOCIAL_MONITOR_PV}
-  resources:
-    requests:
-      storage: ${SOCIAL_MONITOR_PV_SIZE}
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: ${SOCIAL_MONITOR_PVC}
+#   namespace: ${SOCIAL_MONITOR_NAMESPACE}
+# spec:
+#   accessModes:
+#     - ReadWriteMany
+#   storageClassName: efs-sc
+#   volumeName: ${SOCIAL_MONITOR_PV}
+#   selector:
+#     matchLabels:
+#       name: ${SOCIAL_MONITOR_PV}
+#   resources:
+#     requests:
+#       storage: ${SOCIAL_MONITOR_PV_SIZE}
 
 ---
 apiVersion: apps/v1
@@ -52,7 +52,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: ${SOCIAL_MONITOR_APP_NAME}
       namespace: ${SOCIAL_MONITOR_NAMESPACE}
-      alpha.eksctl.io/nodegroup-name: ${SOCIAL_MONITOR_NODE_GROUP}
+      cloud.google.com/gke-nodepool: ${SOCIAL_MONITOR_NODE_GROUP} # soc_st_ng
   replicas: ${SOCIAL_MONITOR_MIN_REP}
   revisionHistoryLimit: 4
   template:
@@ -60,7 +60,7 @@ spec:
       labels:
         app.kubernetes.io/name: ${SOCIAL_MONITOR_APP_NAME}
         namespace: ${SOCIAL_MONITOR_NAMESPACE}
-        alpha.eksctl.io/nodegroup-name: ${SOCIAL_MONITOR_NODE_GROUP}
+        cloud.google.com/gke-nodepool: ${SOCIAL_MONITOR_NODE_GROUP} # soc_st_ng
     spec:
       containers:
         - image: ${SOCIAL_MONITOR_REPOSITORY}:${TAG}
@@ -88,15 +88,16 @@ spec:
             periodSeconds: 5
             successThreshold: 1
             timeoutSeconds: 5
-          volumeMounts:
-            - mountPath: /storage
-              name: ${SOCIAL_MONITOR_VOLUME}
-      volumes:
-        - name: ${SOCIAL_MONITOR_VOLUME}
-          persistentVolumeClaim:
-            claimName: ${SOCIAL_MONITOR_PVC}
-      nodeSelector:
-        "eks.amazonaws.com/nodegroup": ${SOCIAL_MONITOR_NODE_GROUP}
+      #     volumeMounts:
+      #       - mountPath: /storage
+      #         name: ${SOCIAL_MONITOR_VOLUME}
+      # volumes:
+      #   - name: ${SOCIAL_MONITOR_VOLUME}
+      #     persistentVolumeClaim:
+      #       claimName: ${SOCIAL_MONITOR_PVC}
+      nodeSelector: 
+        cloud.google.com/gke-nodepool: ${SOCIAL_MONITOR_NODE_GROUP} # soc_st_ng
+
 
 ---
 apiVersion: autoscaling/v1
@@ -128,7 +129,18 @@ spec:
   selector:
     app.kubernetes.io/name: ${SOCIAL_MONITOR_APP_NAME}
     namespace: ${SOCIAL_MONITOR_NAMESPACE}
-    alpha.eksctl.io/nodegroup-name: ${SOCIAL_MONITOR_NODE_GROUP}
+    cloud.google.com/gke-nodepool: ${SOCIAL_MONITOR_NODE_GROUP}
+
+# Google Managed SSL Certificate.
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: managed-certificate
+  namespace: ${GQLSWIS_NAMESPACE}
+spec:
+  domains:
+    - socialmonitor-gcp.experience.com
 
 ---
 apiVersion: networking.k8s.io/v1
@@ -137,19 +149,22 @@ metadata:
   namespace: ${SOCIAL_MONITOR_NAMESPACE}
   name: ${SOCIAL_MONITOR_INGRESS_NAME}
   annotations:
+    kubernetes.io/ingress.allow-http: "false"
+    networking.gke.io/managed-certificates: managed-certificate
+    kubernetes.io/ingress.global-static-ip-name: exp-prod-social-monitor  
     # external-dns.alpha.kubernetes.io/hostname: ${SOCIAL_MONITOR_HOST_NAME}
-    alb.ingress.kubernetes.io/target-type: instance
-    alb.ingress.kubernetes.io/certificate-arn: ${SOCIAL_MONITOR_CERTIFICATE_ARN}
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/load-balancer-name: ${SOCIAL_MONITOR_ALB}
-    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=ss-prd1-v2-alb-access-logs-new,access_logs.s3.prefix=socialmonitor-alb,idle_timeout.timeout_seconds=60
-    alb.ingress.kubernetes.io/wafv2-acl-arn: ${WAF_ARN}
-    alb.ingress.kubernetes.io/ssl-redirect: "443"
-    kubernetes.io/ingress.class: ${ING_CLS_NAME}
+    # alb.ingress.kubernetes.io/target-type: instance
+    # alb.ingress.kubernetes.io/certificate-arn: ${SOCIAL_MONITOR_CERTIFICATE_ARN}
+    # alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    # alb.ingress.kubernetes.io/scheme: internet-facing
+    # alb.ingress.kubernetes.io/load-balancer-name: ${SOCIAL_MONITOR_ALB}
+    # alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=ss-prd1-v2-alb-access-logs-new,access_logs.s3.prefix=socialmonitor-alb,idle_timeout.timeout_seconds=60
+    # alb.ingress.kubernetes.io/wafv2-acl-arn: ${WAF_ARN}
+    # alb.ingress.kubernetes.io/ssl-redirect: "443"
+    # kubernetes.io/ingress.class: ${ING_CLS_NAME}
 spec:
   rules:
-    - host: ${SOCIAL_MONITOR_HOST_NAME}
+    - host: "socialmonitor-gcp.experience.com" # ${SOCIAL_MONITOR_HOST_NAME}
       http:
         paths:
           - path: /

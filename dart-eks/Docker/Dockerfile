@@ -1,4 +1,4 @@
-FROM 387102133919.dkr.ecr.us-east-1.amazonaws.com/python-v3.7-slim:latest
+FROM us-east4-docker.pkg.dev/experiencedotcom-devops/experiencedotcom-dev/python-v3.7-slim:latest
 
 WORKDIR /var/lib/dart-api
 
