@@ -109,6 +109,7 @@ pipeline {
                         else
                             envsubst < ./Kubernetes/namespace.yaml  | kubectl apply -f -
                             kubectl create secret generic "${SURVEY_TAKER_SECRET}" --from-env-file=/var/lib/jenkins/Docker-Kubernetes/survey-taker/survey-taker-secret.env -n "${SURVEY_TAKER_NAMESPACE}"
+                            envsubst < ./Kubernetes/workload_identity.yaml   | kubectl apply -f -
                             envsubst < ./Kubernetes/survey_taker_shorturl_deploy.yaml   | kubectl apply -f -
                             envsubst < ./Kubernetes/survey_taker_deploy.yaml   | kubectl apply -f -
                         fi
